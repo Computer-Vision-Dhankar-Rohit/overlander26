@@ -37,3 +37,37 @@
   
 - **Output Parameters:**
   - Returns: None (saves extracted frames to disk)
+
+
+
+
+
+
+
+
+---------------------
+
+- certain hiccups 
+
+
+---------------------
+
+
+  ```bash
+  $ pip install dlib
+Collecting dlib
+  Downloading dlib-20.0.0.tar.gz (3.3 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.3/3.3 MB 1.1 MB/s eta 0:00:00
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... done
+Building wheels for collected packages: dlib
+  Building wheel for dlib (pyproject.toml) ... done
+  Created wheel for dlib: filename=dlib-20.0.0-cp310-cp310-linux_x86_64.whl size=4102548 sha256=c0f7cc554c95417c470faabf1b71adb36d866ec09e6f4eeef5500a37e3ea42b6
+  Stored in directory: /home/dhankar/.cache/pip/wheels/97/bc/4a/1f441cf62ce4c81ad4f83f298cef0e5ff3af0577ffb4cdff2f
+Successfully built dlib
+Installing collected packages: dlib
+Successfully installed dlib-20.0.0
+(env_overlander) dhankar@dhankar-1:~/.../ipWebCam$ 
+```
+
