@@ -10,6 +10,7 @@ from analysis.detr_hugging_face import (GetFramesFromVids ,
 
 #from analysis.hugging_face_rtdetr_v2 import AutoModelRtDetrV2
 
+
 class IPWebCam:
     """ 
     """
@@ -111,6 +112,89 @@ class IPWebCam:
             print(f"Error in face_detect_with_landmarks: {err}")
 
     @classmethod
+    def face_detect_and_landmarks_combined(self):
+        """
+        Combined pipeline: Runs face detection and landmark detection, then concatenates both images side-by-side.
+        LEFT: Face detection with green boxes and white "FACE_ID_By_OVERLANDER" labels
+        RIGHT: Landmark detection with red dots
+        """
+        try:
+            import cv2
+            import numpy as np
+            from analysis.detr_hugging_face import FaceDetection, FacialLandmarksDetection
+            
+            print("--Starting combined face detection and landmarks pipeline--")
+            logger.info("--Starting combined pipeline--")
+            
+            # Get image list
+            image_rootDIR = "/home/dhankar/temp/09_25/off_1/jungle_images/deepface_sample_images"
+            image_list_path = self.get_frames_local_list(image_rootDIR)
+            
+            output_dir = "../data_dir/out_dir/"
+            os.makedirs(output_dir, exist_ok=True)
+            
+            for image_local_path in image_list_path:
+                print(f"\n--Processing image: {image_local_path}")
+                
+                # Step 1: Face Detection
+                print("--Running face detection...")
+                results_face_detect, face_bbox_list = FaceDetection.face_detect_yolo_huggin_face(image_local_path)
+                
+                if len(face_bbox_list) == 0:
+                    print(f"--No faces detected in {image_local_path}, skipping...")
+                    continue
+                
+                # Save face detection image to temp location
+                face_detect_temp = os.path.join(output_dir, "temp_face_detect.png")
+                annotated_face = FaceDetection.annotate_face_detection(image_local_path, results_face_detect)
+                cv2.imwrite(face_detect_temp, annotated_face)
+                print(f"--Face detection complete: {len(face_bbox_list)} faces detected")
+                
+                # Step 2: Landmark Detection
+                print("--Running landmark detection...")
+                face_landmarks_dict, annotated_landmarks = FacialLandmarksDetection.detect_and_annotate_full_pipeline(
+                    image_local_path,
+                    face_bbox_list,
+                    output_dir=None  # Don't save yet
+                )
+                print(f"--Landmark detection complete")
+                
+                # Step 3: Load both images
+                img_face_detect = cv2.imread(face_detect_temp)
+                img_landmarks = annotated_landmarks
+                
+                # Step 4: Ensure both images have same height for concatenation
+                h1, w1 = img_face_detect.shape[:2]
+                h2, w2 = img_landmarks.shape[:2]
+                
+                if h1 != h2:
+                    # Resize to match the smaller height
+                    target_height = min(h1, h2)
+                    img_face_detect = cv2.resize(img_face_detect, (int(w1 * target_height / h1), target_height))
+                    img_landmarks = cv2.resize(img_landmarks, (int(w2 * target_height / h2), target_height))
+                
+                # Step 5: Concatenate horizontally (side by side)
+                combined_image = np.hstack([img_face_detect, img_landmarks])
+                
+                # Step 6: Save combined image
+                base_name = os.path.splitext(os.path.basename(image_local_path))[0]
+                output_path = os.path.join(output_dir, f"{base_name}_combined.png")
+                cv2.imwrite(output_path, combined_image)
+                
+                print(f"--SUCCESS: Saved combined image to {output_path}")
+                logger.info("--Saved combined image---> %s", output_path)
+                
+                # Clean up temp file
+                if os.path.exists(face_detect_temp):
+                    os.remove(face_detect_temp)
+            
+            print("\n--Combined pipeline completed for all images--")
+            
+        except Exception as err:
+            logger.error("--Error in face_detect_and_landmarks_combined---> %s", err)
+            print(f"Error in combined pipeline: {err}")
+
+    @classmethod
     def object_detect_HFRtDetr_pipeline(self):
         """ 
         Desc:
@@ -148,10 +232,14 @@ class IPWebCam:
 if __name__ == "__main__":
     #IPWebCam().invoke_scan() #TODO -ARGPARSE required for main method calls
     #IPWebCam().analyse_scan()
-    #IPWebCam().face_detect_yolo_hface()
+
+    # TODO - INVOKE End-to-end Face Detection - and Facial Landmarks 
+    # Combine the Output images - Creates side-by-side concatenated images
+    IPWebCam().face_detect_and_landmarks_combined()
     
-    # INVOKE End-to-end Face Detection with Facial Landmarks
-    IPWebCam().face_detect_with_landmarks()
+    # Old separate methods (use only if you want individual outputs):
+    # IPWebCam().face_detect_yolo_hface()
+    # IPWebCam().face_detect_with_landmarks()
     
     #IPWebCam().object_detect_HFRtDetr_pipeline()
     #IPWebCam().object_detect_HFRtDetr_model()

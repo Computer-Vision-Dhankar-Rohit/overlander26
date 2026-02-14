@@ -377,7 +377,7 @@ class FaceDetection:
 
         box_annotator = sv.BoxAnnotator(color=sv.Color.GREEN,thickness=5) ## TODO - color=blue -
         label_annotator = sv.LabelAnnotator(color=sv.Color.GREEN,
-                                           text_color=sv.Color.BLACK,
+                                           text_color=sv.Color.WHITE,
                                            text_thickness=3,
                                            text_position=sv.Position.BOTTOM_RIGHT)
         
@@ -417,6 +417,35 @@ class FaceDetection:
         
         cv2.imwrite(face_out_rootDIR+image_face_detect+'__face_.png', annotated_frame)
         logger.debug("--Saved face detection image to---> %s" ,face_out_rootDIR+image_face_detect+'__face_.png')
+
+        return results_face_detect, ls_faces_coord
+    
+    @classmethod
+    def annotate_face_detection(cls, image_frame_path, results_face_detect):
+        """
+        Annotate face detection results and return the annotated image (without saving).
+        Used for creating combined images.
+        """
+        image_face_detected = cv2.imread(image_frame_path)
+        
+        box_annotator = sv.BoxAnnotator(color=sv.Color.GREEN, thickness=5)
+        label_annotator = sv.LabelAnnotator(color=sv.Color.GREEN,
+                                           text_color=sv.Color.WHITE,
+                                           text_thickness=3,
+                                           text_position=sv.Position.BOTTOM_RIGHT)
+        
+        labels = ["FACE_ID_By_OVERLANDER"] * len(results_face_detect)
+        
+        annotated_frame = box_annotator.annotate(
+            scene=image_face_detected.copy(),
+            detections=results_face_detect)
+        
+        annotated_frame = label_annotator.annotate(
+            scene=annotated_frame,
+            detections=results_face_detect,
+            labels=labels)
+        
+        return annotated_frame
 
 class ObjDetHFRtDetr:
     """
@@ -656,7 +685,7 @@ class FacialLandmarksDetection:
                 # Draw landmark points
                 for landmark in landmarks:
                     x, y = int(landmark[0]), int(landmark[1])
-                    cv2.circle(annotated_image, (x, y), 1, (0, 255, 0), -1)  # Green dots
+                    cv2.circle(annotated_image, (x, y), 4, (0, 0, 255), -1)  # RED larger dots
                 
                 logger.debug("--Annotated %d landmarks for face %d-->", len(landmarks), face_idx)
             
@@ -708,15 +737,17 @@ class FacialLandmarksDetection:
             # Detect landmarks
             face_landmarks_dict = cls.detect_landmarks_on_face(image_frame_path, face_bbox_list)
             
-            # Prepare output path
-            if not os.path.exists(output_dir):
-                os.makedirs(output_dir)
+            # Prepare output path only if output_dir is provided
+            output_path = None
+            if output_dir:
+                if not os.path.exists(output_dir):
+                    os.makedirs(output_dir)
+                
+                image_name = os.path.basename(image_frame_path)
+                image_name_no_ext = os.path.splitext(image_name)[0]
+                output_path = os.path.join(output_dir, f"{image_name_no_ext}_landmarks.png")
             
-            image_name = os.path.basename(image_frame_path)
-            image_name_no_ext = os.path.splitext(image_name)[0]
-            output_path = os.path.join(output_dir, f"{image_name_no_ext}_landmarks.png")
-            
-            # Annotate and save
+            # Annotate and optionally save
             annotated_image = cls.annotate_landmarks_on_image(
                 image_frame_path, 
                 face_landmarks_dict, 
