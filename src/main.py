@@ -1,6 +1,6 @@
 import os
-#from util_logger import setup_logger
-# logger = setup_logger(module_name=str(__name__))
+from util_logger import setup_logger
+logger = setup_logger(module_name=str(__name__))
 # from read_cam.read_webcam import CV2VideoCapture
 from analysis.detr_hugging_face import (GetFramesFromVids , 
                                         PlotBboxOnFrames,
@@ -9,6 +9,7 @@ from analysis.detr_hugging_face import (GetFramesFromVids ,
                                         ObjDetHFRtDetr) #,PlotBboxOnFrames
 
 #from analysis.hugging_face_rtdetr_v2 import AutoModelRtDetrV2
+from analysis.media_pipe import MediaPipeGoog
 
 
 class IPWebCam:
@@ -228,6 +229,20 @@ class IPWebCam:
                 AutoModelRtDetrV2().plot_results_HFRtDetr_v2_model(image_detections , image_local_frame,image_local_path)
         except Exception as err:
             logger.error("--main.py--object_detect_HFRtDetr_model-> %s" ,err)
+
+    @classmethod
+    def pose_media_pipe_google(self):
+        """ 
+        Desc:
+            - Not IPWebCam -- Pose detection 
+            - Hit the recorded Videos and Static Frames 
+        """
+        try:
+            print("--HIT--pose_media_pipe_google---")
+            MediaPipeGoog().pose_media_pipe_google_2()
+        except Exception as err:
+            logger.error("--main.py--pose_media_pipe_google---> %s" ,err)
+
 
 if __name__ == "__main__":
     #IPWebCam().invoke_scan() #TODO -ARGPARSE required for main method calls
