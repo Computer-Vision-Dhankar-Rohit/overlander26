@@ -1,4 +1,4 @@
-# Overlander26
+# Overlander26 -- permitted Claude 
 
 Human Pose Detection and Analysis using MediaPipe Tasks API
 
