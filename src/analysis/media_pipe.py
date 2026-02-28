@@ -4,6 +4,8 @@ sys.path.append('..')
 from util_logger import setup_logger
 logger = setup_logger(module_name=str(__name__))
 
+from util_video_converter import util_convert_mp4, VideoCodecConverter
+
 import mediapipe as mp
 from mediapipe.tasks import python as media_pipe_python_api
 from mediapipe.tasks.python import vision as media_pipe_vision_api
@@ -256,6 +258,22 @@ class MediaPipeGoog():
     else:
         logger.error(f"❌ Invalid video source type: {type(video_source)}")
         return
+
+    # Check if video needs H.264 conversion (for OpenCV compatibility)
+    if source_type == "LOCAL_FILE":
+        logger.info("🔍 Checking video codec compatibility...")
+        safe_video_path = util_convert_mp4(video_source)
+        
+        if safe_video_path is None:
+            logger.error(f"❌ Failed to prepare video for playback: {video_source}")
+            logger.info("💡 Ensure ffmpeg is installed: sudo apt install ffmpeg")
+            return
+        
+        if safe_video_path != video_source:
+            logger.info(f"📺 Using converted video: {safe_video_path}")
+            video_source = safe_video_path
+        else:
+            logger.debug("✅ Video codec is compatible, no conversion needed")
 
     # Initialize video capture
     capture_vid_init = cv2.VideoCapture(video_source)

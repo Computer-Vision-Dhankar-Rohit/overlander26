@@ -1,3 +1,224 @@
+```bash
+                                                                                                                 
+                                                                                                                                              
+● Display is :1. Let me run with the correct display:                      
+                                                                                                                                              
+● Bash(\                                                                                                                                      
+        source /home/dhankar/temp/26_02/env_overlander/bin/activate && \…)                                                                    
+  ⎿  INFO: Created TensorFlow Lite XNNPACK delegate for CPU.                                                                                  
+     WARNING: All log messages before absl::InitializeLog() is called are written to STDERR                                                   
+     W0000 00:00:1772284030.053672   62392 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature i     
+     … +12 lines (ctrl+o to expand)                                                                                                           
+  ⎿  (timeout 5m)                                                                                                                             
+                                                                                                                                              
+● The pipeline ran. Let me check what was produced in the output directories:                                                                 
+                                                                                                                                              
+● Searched for 2 patterns, read 3 files (ctrl+o to expand)                                                                                    
+                                                                                                                                              
+● The pipeline is running. Let me check the output files and see the full end result:                                                         
+                                                                                                                                              
+● Read 1 file (ctrl+o to expand)                                                                                                              
+                                                                                                                                              
+● End-to-end test successful! Let me check the log tail to confirm completion:                                                                
+                                                                                                                                              
+● Searched for 1 pattern (ctrl+o to expand)                                                                                                   
+                                                                                                                                              
+● Complete end-to-end success. Here's the full result summary:                                                                                
+                                                                                                                                              
+  ---                                                                                                                                         
+  Pose Detection Pipeline — gym_2.mp4 — Test Results                                                                                          
+                                                                                                                                              
+  ┌───────────────────┬─────────────────────────────────────────────────────────┐
+  │       Item        │                          Value                          │
+  ├───────────────────┼─────────────────────────────────────────────────────────┤                                                             
+  │ Video             │ gym_2_h264.mp4 (10.4s, H.264 re-encode of AV1 original) │                                                             
+  ├───────────────────┼─────────────────────────────────────────────────────────┤                                                             
+  │ Total frames read │ 521                                                     │                                                             
+  ├───────────────────┼─────────────────────────────────────────────────────────┤                                                             
+  │ Frames sampled    │ 3 (every 5 seconds)                                     │
+  ├───────────────────┼─────────────────────────────────────────────────────────┤
+  │ Poses detected    │ 3 / 3 (100% hit rate)                                   │
+  ├───────────────────┼─────────────────────────────────────────────────────────┤
+  │ Output dir        │ DATA_DIR/pose_detected/pose_id_not_ipcam/               │
+  ├───────────────────┼─────────────────────────────────────────────────────────┤
+  │ Grid view         │ OVERLANDER__GRID_VIEW window shown on display :1        │
+  └───────────────────┴─────────────────────────────────────────────────────────┘
+
+  Annotated frames saved:
+  - frame_0000.jpg_frame_pose_09__0__.png (261 KB)
+  - frame_0001.jpg_frame_pose_11__0__.png (197 KB)
+  - frame_0002.jpg_frame_pose_12__0__.png (319 KB)
+
+  ---
+  Changes made in this session:
+
+  1. media_pipe.py — Fixed init_pose_detector default model path to use absolute __file__-relative path; fixed pose_media_pipe_google_0
+  relative output paths → absolute + auto-create dirs
+  2. main.py — Added video_source param to IPWebCam.pose_media_pipe_google(); updated __main__ block to invoke pose pipeline with
+  gym_2_h264.mp4; moved DETR heavy imports to be lazy (inside methods) so the pose pipeline doesn't load YOLO/RT-DETR models at startup
+  3. Downloaded pose_landmarker.task (30 MB) to DATA_DIR/pose_models/
+  4. Converted gym_2.mp4 (AV1) → gym_2_h264.mp4 (H.264) — AV1 is not supported by OpenCV without GPU hardware acceleration on this machine
+
+✻ Brewed for 9m 38s
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ commit this
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ accept edits on (shift+tab to cycle)
+
+
+
+
+
+
+
+
+
+
+
+  ⎿  Added 4 lines, removed 3 lines
+      72          """                                                                                                                         
+      73          try:
+      74              logger.debug("--- face_detect_with_landmarks hit")                                                                      
+      75 -                                                                                                                             
+      75 +            from analysis.detr_hugging_face import FaceDetection, FacialLandmarksDetection                                   
+      76 +                                                                                                                             
+      77              # Set image directory
+      78              image_rootDIR = "/home/dhankar/temp/09_25/off_1/jungle_images/deepface_sample_images"
+      79              ls_files_uploads = self.get_frames_local_list(image_rootDIR)
+      79 -                                                                                                                             
+      80 +                                                                                                                             
+      81              for iter_k in range(len(ls_files_uploads)):
+      82                  image_local_path = ls_files_uploads[iter_k]
+      83                  logger.debug("--- Processing image for landmarks %s", image_local_path)
+      83 -                                                                                                                             
+      84 +                                                                                                                             
+      85                  # Step 1: Detect faces using YOLO
+      86                  face_detection_instance = FaceDetection()
+      87                  model_yolov8 = face_detection_instance.invoke_model_yolov8_face_detection()
+
+● Read 1 file (ctrl+o to expand)                     
+                
+● Good — face_detect_and_landmarks_combined already has a lazy import inside the method. Now fix object_detect_HFRtDetr_pipeline and          
+  object_detect_HFRtDetr_model:                      
+                                                                                                                                              
+● Read 1 file (ctrl+o to expand)                                                                                                              
+                                                                                                                                              
+● Update(src/main.py)                                                                                                                         
+  ⎿  Added 1 line                                           
+      201              - pipeline processed - Not direct Model                                                                                
+      202          """                                                                                                                        
+      203          try:                                                                                                                       
+      204 +            from analysis.detr_hugging_face import ObjDetHFRtDetr                                                                  
+      205              image_frame_path = "../data_dir/jungle_images/input_DIR/"                                                              
+      206              ls_files_uploads = self.get_frames_local_list(image_frame_path)                                                        
+      207              for iter_k in range(len(ls_files_uploads)):                                                                            
+
+● Now run the test again — with lazy imports, only MediaPipe loads:
+
+● Bash(cd /home/dhankar/temp/26_02/git_over/overlander26/src && \                                                                             
+        source /home/dhankar/temp/26_02/env_overlander/bin/activate && \…)
+  ⎿  [av1 @ 0x5560d05a4f00] Your platform doesn't support hardware accelerated AV1 decoding.                                                  
+     [av1 @ 0x5560d05a4f00] Failed to get pixel format.      
+     [av1 @ 0x5560d05a4f00] Get current frame error                                                                                           
+                                                            
+● AV1 codec — not supported by OpenCV's hardware decoder on this machine. Let me check the video details and convert it:                      
+                                                             
+● Bash(ffprobe -v quiet -print_format json -show_streams \                                                                                    
+        /home/dhankar/temp/26_02/git_over/overlander26/DATA_DIR/pose_detected/init_video/gym_2.mp4 \…)                                      
+  ⎿  av1 1080 x 1920                                                                                                                          
+     aac ? x ?                                                                                                                                
+                                                                                                                                              
+● Bash(ffmpeg -i /home/dhankar/temp/26_02/git_over/overlander26/DATA_DIR/pose_detected/init_video/gym_2.mp4 \                                 
+        -c:v libx264 -preset fast -crf 23 -c:a copy \…)                                                                                       
+  ⎿  [libx264 @ 0x5568d17a86c0] Weighted P-Frames: Y:0.0% UV:0.0%                                                                             
+     [libx264 @ 0x5568d17a86c0] ref P L0: 66.9% 33.1%                                                                                         
+     [libx264 @ 0x5568d17a86c0] ref B L0: 86.8% 13.2%                                                                                         
+     … +2 lines (ctrl+o to expand)                                                                                                            
+  ⎿  (timeout 2m)                                                                                                                             
+                                                                                                                                              
+● Read 1 file (ctrl+o to expand)                                                                                                              
+                                                                                                                                              
+● H.264 conversion done (4.4 MB). Now update main.py __main__ to use the H.264 version:                                                       
+                                                      
+● Update(main.py)                                                                                                                             
+  ⎿  Added 3 lines, removed 1 line                                                                                                            
+      249      import os as _os                                                                                                               
+      250      _src_dir  = _os.path.dirname(_os.path.abspath(__file__))         # .../src/                                                    
+      251      _git_root = _os.path.dirname(_src_dir)                            # .../overlander26/                                          
+      252 +    # gym_2.mp4 is AV1-encoded (not supported by OpenCV without GPU).                                                              
+      253 +    # gym_2_h264.mp4 is the H.264 re-encode — compatible with cv2.VideoCapture.                                                    
+      254      _gym2_path = _os.path.join(_git_root, "DATA_DIR", "pose_detected",
+      253 -                               "init_video", "gym_2.mp4")                                                                   
+      255 +                               "init_video", "gym_2_h264.mp4")                                                              
+      256  
+      257      # TODO-1: Pose detection end-to-end test with gym_2.mp4
+      258      IPWebCam().pose_media_pipe_google(video_source=_gym2_path)
+
+● Bash(\                                                                                                                                      
+        source /home/dhankar/temp/26_02/env_overlander/bin/activate && \…)
+  ⎿  Error: Exit code 134                                                                                                                     
+     INFO: Created TensorFlow Lite XNNPACK delegate for CPU.                                                                            
+     WARNING: All log messages before absl::InitializeLog() is called are written to STDERR                                                   
+     W0000 00:00:1772283880.113305   62132 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature 
+     inference. Disabling support for feedback tensors.                                                                                       
+     W0000 00:00:1772283880.159608   62125 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature       
+     inference. Disabling support for feedback tensors.                                                                                       
+     W0000 00:00:1772283880.232529   62129 landmark_projection_calculator.cc:78] Using NORM_RECT without IMAGE_DIMENSIONS is only supported   
+     for the square ROI. Provide IMAGE_DIMENSIONS or use PROJECTION_MATRIX.                                                                   
+     qt.qpa.xcb: could not connect to display :0                                                                                              
+     qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in                                                                            
+     "/home/dhankar/temp/26_02/env_overlander/lib/python3.10/site-packages/cv2/qt/plugins" even though it was found.
+     This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.  
+
+     … +16 lines (ctrl+o to see all)                                                                                                          
+                                                                                                                                              
+● Good progress — MediaPipe model loaded successfully! The crash is cv2.imshow can't find the X display. Let me check the actual display:
+
+● Bash(who; echo "---"; ls /tmp/.X11-unix/ 2>/dev/null; echo "DISPLAY=$DISPLAY")                                                              
+  ⎿  dhankar  :1           2026-02-28 07:32 (:1)
+     ---                                                                                                                                      
+     X1                                                                                                                                       
+     DISPLAY=:1                                                                                                                               
+                                                                                                                                              
+● Display is :1. Let me run with the correct display:                      
+                                                                                                                                              
+● Bash(\                                                                                                                                      
+        source /home/dhankar/temp/26_02/env_overlander/bin/activate && \…)                                                                    
+  ⎿  Running…                                                                                                                                 
+                                                                                                                                              
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Bash command                                                                                                                                 
+                                                                                                                                              
+   \                                                                                                                                          
+     source /home/dhankar/temp/26_02/env_overlander/bin/activate && \
+     DISPLAY=:1 python main.py 2>&1
+   Run pose detection with correct DISPLAY=:1
+                                                                                                    
+ Do you want to proceed?                                          
+ ❯ 1. Yes                                        
+   2. Yes, and don’t ask again for: source:*                                                                                                  
+   3. No                                                                                                                                      
+
+ Esc to cancel · Tab to amend · ctrl+e to explain
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ```bash
