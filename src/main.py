@@ -53,7 +53,7 @@ class IPWebCam:
         ls_files_uploads = self.get_frames_local_list(image_rootDIR)
         for iter_k in range(len(ls_files_uploads)):
             image_local_path = ls_files_uploads[iter_k]
-            print("--image_local_path----",image_local_path)
+            logger.debug("--- image_local_path %s", image_local_path)
             FaceDetection().face_detect_yolo_huggin_face(image_local_path)
 
     @classmethod
@@ -68,8 +68,7 @@ class IPWebCam:
         - Saves annotated images with landmarks
         """
         try:
-            print(f"-face_detect_with_landmarks--hit-> ")
-            logger.debug(f"-face_detect_with_landmarks--hit-> ")
+            logger.debug("--- face_detect_with_landmarks hit")
             
             # Set image directory
             image_rootDIR = "/home/dhankar/temp/09_25/off_1/jungle_images/deepface_sample_images"
@@ -77,8 +76,7 @@ class IPWebCam:
             
             for iter_k in range(len(ls_files_uploads)):
                 image_local_path = ls_files_uploads[iter_k]
-                print("--Processing image for landmarks----", image_local_path)
-                logger.debug("--Processing image for landmarks----> %s", image_local_path)
+                logger.debug("--- Processing image for landmarks %s", image_local_path)
                 
                 # Step 1: Detect faces using YOLO
                 face_detection_instance = FaceDetection()
@@ -101,16 +99,14 @@ class IPWebCam:
                         face_bbox_list,
                         output_dir="../data_dir/out_dir/"
                     )
-                    
-                    print(f"--Completed landmarks detection for {len(face_bbox_list)} faces")
+
+                    logger.debug("--- Completed landmarks detection for %s faces", len(face_bbox_list))
                     logger.debug("--Completed landmarks for---> %s with %d faces", image_local_path, len(face_bbox_list))
                 else:
-                    print(f"--No faces detected in image: {image_local_path}")
-                    logger.warning("--No faces detected in image---> %s", image_local_path)
-                    
+                    logger.warning("--- No faces detected in image %s", image_local_path)
+
         except Exception as err:
             logger.error("--Error in face_detect_with_landmarks---> %s", err)
-            print(f"Error in face_detect_with_landmarks: {err}")
 
     @classmethod
     def face_detect_and_landmarks_combined(self):
@@ -124,7 +120,7 @@ class IPWebCam:
             import numpy as np
             from analysis.detr_hugging_face import FaceDetection, FacialLandmarksDetection
             
-            print("--Starting combined face detection and landmarks pipeline--")
+            logger.debug("--- Starting combined face detection and landmarks pipeline")
             logger.info("--Starting combined pipeline--")
             
             # Get image list
@@ -135,31 +131,31 @@ class IPWebCam:
             os.makedirs(output_dir, exist_ok=True)
             
             for image_local_path in image_list_path:
-                print(f"\n--Processing image: {image_local_path}")
-                
+                logger.debug("--- Processing image %s", image_local_path)
+
                 # Step 1: Face Detection
-                print("--Running face detection...")
+                logger.debug("--- Running face detection")
                 results_face_detect, face_bbox_list = FaceDetection.face_detect_yolo_huggin_face(image_local_path)
                 
                 if len(face_bbox_list) == 0:
-                    print(f"--No faces detected in {image_local_path}, skipping...")
+                    logger.debug("--- No faces detected in %s skipping", image_local_path)
                     continue
                 
                 # Save face detection image to temp location
                 face_detect_temp = os.path.join(output_dir, "temp_face_detect.png")
                 annotated_face = FaceDetection.annotate_face_detection(image_local_path, results_face_detect)
                 cv2.imwrite(face_detect_temp, annotated_face)
-                print(f"--Face detection complete: {len(face_bbox_list)} faces detected")
-                
+                logger.debug("--- Face detection complete %s faces detected", len(face_bbox_list))
+
                 # Step 2: Landmark Detection
-                print("--Running landmark detection...")
+                logger.debug("--- Running landmark detection")
                 face_landmarks_dict, annotated_landmarks = FacialLandmarksDetection.detect_and_annotate_full_pipeline(
                     image_local_path,
                     face_bbox_list,
                     output_dir=None  # Don't save yet
                 )
-                print(f"--Landmark detection complete")
-                
+                logger.debug("--- Landmark detection complete")
+
                 # Step 3: Load both images
                 img_face_detect = cv2.imread(face_detect_temp)
                 img_landmarks = annotated_landmarks
@@ -181,19 +177,18 @@ class IPWebCam:
                 base_name = os.path.splitext(os.path.basename(image_local_path))[0]
                 output_path = os.path.join(output_dir, f"{base_name}_combined.png")
                 cv2.imwrite(output_path, combined_image)
-                
-                print(f"--SUCCESS: Saved combined image to {output_path}")
+
+                logger.debug("--- SUCCESS Saved combined image to %s", output_path)
                 logger.info("--Saved combined image---> %s", output_path)
                 
                 # Clean up temp file
                 if os.path.exists(face_detect_temp):
                     os.remove(face_detect_temp)
             
-            print("\n--Combined pipeline completed for all images--")
-            
+            logger.debug("--- Combined pipeline completed for all images")
+
         except Exception as err:
             logger.error("--Error in face_detect_and_landmarks_combined---> %s", err)
-            print(f"Error in combined pipeline: {err}")
 
     @classmethod
     def object_detect_HFRtDetr_pipeline(self):
@@ -206,11 +201,10 @@ class IPWebCam:
             ls_files_uploads = self.get_frames_local_list(image_frame_path)
             for iter_k in range(len(ls_files_uploads)):
                 image_frame = ls_files_uploads[iter_k]
-                print("--IMAGE--FRAME-----",image_frame)
-                print("   ==FRA------   "*20)
+                logger.debug("--- IMAGE FRAME %s", image_frame)
                 ObjDetHFRtDetr().object_detect_RT_DETR(image_frame)
         except Exception as err:
-            print(err)
+            logger.error("--- object_detect_HFRtDetr_pipeline error %s", err)
 
     @classmethod
     def object_detect_HFRtDetr_model(self):
@@ -223,7 +217,7 @@ class IPWebCam:
             ls_files_uploads = self.get_frames_local_list(image_rootDIR)
             for iter_k in range(len(ls_files_uploads)):
                 image_local_path = ls_files_uploads[iter_k]
-                print("--image_local_path----",image_local_path)
+                logger.debug("--- image_local_path %s", image_local_path)
                 image_detections , image_local_frame = AutoModelRtDetrV2().obj_detect_HFRtDetr_v2_model(image_local_path)
                 logger.debug("--main.py--model_obj_detection--image_detections----aa---> %s" ,image_detections)
                 AutoModelRtDetrV2().plot_results_HFRtDetr_v2_model(image_detections , image_local_frame,image_local_path)
@@ -238,7 +232,7 @@ class IPWebCam:
             - Hit the recorded Videos and Static Frames 
         """
         try:
-            print("--HIT--pose_media_pipe_google---")
+            logger.debug("--- pose_media_pipe_google hit")
             MediaPipeGoog().pose_media_pipe_google_2()
         except Exception as err:
             logger.error("--main.py--pose_media_pipe_google---> %s" ,err)

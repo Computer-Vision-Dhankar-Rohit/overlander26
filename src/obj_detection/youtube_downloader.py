@@ -34,8 +34,7 @@ class YouTubeDownloader:
         from yt_dlp import YoutubeDL
 
         logger.info(f"Starting download: {youtube_url}")
-        print(f"📥 Downloading: {youtube_url}")
-        print(f"   Output dir : {VIDEOS_DIR}")
+        logger.debug("--- Downloading %s output_dir %s", youtube_url, VIDEOS_DIR)
 
         ydl_opts = {
             # Best MP4 video + best audio
@@ -62,19 +61,19 @@ class YouTubeDownloader:
             ydl.download([youtube_url])
 
         logger.info(f"Download complete → {VIDEOS_DIR}")
-        print(f"✅ Download complete → {VIDEOS_DIR}")
+        logger.debug("--- Download complete %s", VIDEOS_DIR)
 
     @staticmethod
     def list_downloaded():
         """List all MP4 files currently in DATA_DIR/youtube_videos/"""
         mp4_files = sorted(VIDEOS_DIR.glob("*.mp4"))
         if not mp4_files:
-            print(f"No MP4 files found in {VIDEOS_DIR}")
+            logger.debug("--- No MP4 files found in %s", VIDEOS_DIR)
             return []
-        print(f"📂 Downloaded videos in {VIDEOS_DIR}:")
+        logger.debug("--- Downloaded videos in %s", VIDEOS_DIR)
         for f in mp4_files:
             size_mb = f.stat().st_size / (1024 * 1024)
-            print(f"   • {f.name}  ({size_mb:.1f} MB)")
+            logger.debug("--- %s size_mb %s", f.name, size_mb)
         return mp4_files
 
 

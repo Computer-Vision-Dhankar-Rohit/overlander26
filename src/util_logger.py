@@ -10,7 +10,7 @@ from datetime import datetime
 #from utilities.db_logger_handler import DBLoggingHandler
 #"class": "utilities.db_logger_handler.DBLoggingHandler",
 
-LOGS_PATH = "../logs_dir/"
+LOGS_PATH = "../overland_logs_dir/"
 LOG_LEVEL = "DEBUG"#"INFO" #https://docs.python.org/3/library/logging.html#logging.Logger.setLevel
 os.makedirs(LOGS_PATH, exist_ok=True)
 
@@ -36,7 +36,7 @@ def setup_logger(module_name=None): #, folder_name=None):
         # if not os.path.exists(os.path.join(hourly_log_path, module_name)):
         #     os.makedirs(os.path.join(hourly_log_path, module_name))
     if module_name:
-        module_log_file_name = "ipwebcam_log_"+hour_now+"00h_" 
+        module_log_file_name = "overland_log_"+hour_now+"00h_" 
         module_log_file = os.path.join(LOGS_PATH, f'{module_log_file_name}.log')
 
     cnfg_dict = {

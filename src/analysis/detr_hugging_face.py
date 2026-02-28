@@ -102,9 +102,8 @@ class GetFramesFromVids:
     def get_frame_from_video(self):
         """
         """
-        print(f"-get_frame_from_video---HIT--> ")
         try:
-            logger.debug("-get_frame_from_video---HIT->" )
+            logger.debug("--- get_frame_from_video hit")
 
             root_dir = "../data_dir/out_vid_frames_dir/"
             ls_frames_to_write = [4,11,17,25,30,37,45,55,66,77,88,100,110]
@@ -114,7 +113,7 @@ class GetFramesFromVids:
                 vid_short_name = str(ls_video_files_uploads[iter_vid])
                 if "T" in str(vid_short_name):
                     vid_short_name = vid_short_name.rsplit("T",1)
-                    print("---vid_short_name--a-TTT--\n",vid_short_name)
+                    logger.debug("--- vid_short_name %s", vid_short_name)
                     vid_short_name = str(str(vid_short_name[1]).rsplit("_",0))
                 else:
                     pass
@@ -137,12 +136,10 @@ class GetFramesFromVids:
 
                         vidcap.set(cv2.CAP_PROP_POS_FRAMES, ls_frames_to_write[iter_frame])
                         success, image = vidcap.read() #while success:
-                        logger.debug("--WRITING-FRAME----type(image)--> %s",type(image)) ## Numpy nd.array 
-                        # print('width of Image: ', image.shape[1]) ## Pixels -- width of Image:  1920
-                        # print('height of Image:', image.shape[0]) ## Pixels 
-                        print('Size of Image:', image.size) ## Pixels --- Size of Image: 6220800
+                        logger.debug("--WRITING-FRAME----type(image)--> %s",type(image)) ## Numpy nd.array
+                        logger.debug("--- Size of Image %s", image.size)
                         if image.size >= 6000000: ##62,20,800 - MAX for JPEG -- 65,500
-                            print('LArge-forJPEG-Size of Image:', image.size) ## Pixels --- Size of Image: 6220800
+                            logger.debug("--- Large-forJPEG-Size of Image %s", image.size)
                             ## TODO -- Testing for JPEG Size Issues -- "__.jpg"
 
                             frame_save_path = root_dir + str(vid_short_name) + "_frame_"+ str(count)+"__.jpg" #"__.tif"
@@ -346,13 +343,9 @@ class FaceDetection:
             logger.debug("--results_face_detect----average_color_region-> %s" ,average_color_region)
             # Convert to integers (optional, but often useful for display/OpenCV)
             color_rgb_int = average_color_region.astype(int)
-            # Print the integer RGB values
-            print("Integer RGB values:", color_rgb_int)
-            # If you need a tuple:
+            logger.debug("--- Integer RGB values %s", color_rgb_int)
             color_rgb_tuple = tuple(color_rgb_int)
-            print("RGB tuple:", color_rgb_tuple)
-            # If you want to format it nicely:
-            print(f"RGB: ({color_rgb_int[0]}, {color_rgb_int[1]}, {color_rgb_int[2]})")
+            logger.debug("--- RGB tuple %s", color_rgb_tuple)
 
             # --- Dominant Color Calculation (using k-means) --- k = 3
     
@@ -396,17 +389,15 @@ class FaceDetection:
         logger.debug("--results_face_detect-----annotated_frame---> %s" ,type(annotated_frame))
 
         logger.debug("--results_face_detect-----image_frame_path---> %s" ,image_frame_path)
-        ##./data_dir/out_vid_frames_dir/21-08-21-070423__frame_6__.jpg
-        print("--type-----image_frame_path---",type(image_frame_path))
-        
+        logger.debug("--- image_frame_path type %s", type(image_frame_path))
+
         # Extract just the filename from the full path using os.path.basename
         image_face_detect = os.path.basename(image_frame_path)
         # Remove the file extension
         image_face_detect = os.path.splitext(image_face_detect)[0]
-        
-        print("-image_face_detect--",image_face_detect)
+
+        logger.debug("--- image_face_detect %s", image_face_detect)
         logger.debug("--results_face_detect-----image_face_detect---> %s" ,image_face_detect)
-        print("    "*90)
         
         # Define output directory with relative path
         face_out_rootDIR = "../data_dir/out_dir/"
@@ -456,8 +447,7 @@ class ObjDetHFRtDetr:
         """
         image_local = Image.open(image_frame_path) #
         ls_results = pipeline_rtdetr_v2(image_frame_path, threshold=0.3)
-        print("---type(res)---------",type(ls_results))
-        print("   "*100)
+        logger.debug("--- type ls_results %s", type(ls_results))
         self.draw_PIL_Image(ls_results,
                             image_local,
                             image_frame_path)
@@ -488,10 +478,9 @@ class ObjDetHFRtDetr:
         try:
             for iter_k in range(len(ls_results)): ## Original -- #for i, result in enumerate(ls_results):
                 dict_res_1 = ls_results[iter_k]#["box"]
-                print(dict_res_1)
-                print("   "*100) ##{'score': 0.31572669744491577, 'label': 'cup', 'box': {'xmin': 407, 'ymin': 498, 'xmax': 440, 'ymax': 620}}
+                logger.debug("--- dict_res_1 %s", dict_res_1)
                 dict_box = dict_res_1["box"]
-                print(dict_box)
+                logger.debug("--- dict_box %s", dict_box)
                 #color = tuple([int(x * 255) for x in LS_COLORS[iter_k]])
                 xmin, ymin, xmax, ymax = dict_box["xmin"], dict_box["ymin"], dict_box["xmax"], dict_box["ymax"]
                 ax.add_patch(plt.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin,
@@ -511,13 +500,11 @@ class ObjDetHFRtDetr:
                 image_named_bbox = os.path.basename(image_frame_path)
                 # Remove the file extension
                 image_named_bbox = os.path.splitext(image_named_bbox)[0]
-                print("---image_named_bbox----",image_named_bbox)
-                print("- -OK-----   "*10)
+                logger.debug("--- image_named_bbox %s", image_named_bbox)
                 plt.savefig(root_save_dir+str(image_named_bbox)+".png", bbox_inches='tight')
                 logger.debug("--Saved object detection image to---> %s" ,root_save_dir+str(image_named_bbox)+".png")
         except Exception as err:
-            print(err)
-            pass
+            logger.error("--- draw_PIL_Image error %s", err)
 
         #     draw.rectangle((xmin, ymin, xmax, ymax), fill=None, outline=color, width=7)
         #     draw.text((xmin, ymin, xmax, ymax), text=dict_res_1["label"],fill="yellow",align ="left")#font=10)
@@ -571,25 +558,22 @@ class FacialLandmarksDetection:
             predictor_path = "shape_predictor_68_face_landmarks.dat"
             
             if not os.path.exists(predictor_path):
-                print("--Downloading dlib facial landmark model...")
+                logger.debug("--- Downloading dlib facial landmark model")
                 import urllib.request
                 import bz2
                 url = "http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2"
                 urllib.request.urlretrieve(url, "shape_predictor_68_face_landmarks.dat.bz2")
-                
+
                 # Extract the .bz2 file
                 with bz2.open("shape_predictor_68_face_landmarks.dat.bz2", 'rb') as source:
                     with open(predictor_path, 'wb') as dest:
                         dest.write(source.read())
-                print("--Model downloaded and extracted successfully--")
-            
+                logger.debug("--- Model downloaded and extracted successfully")
+
             self.predictor = dlib.shape_predictor(predictor_path)
-            print("--dlib facial landmark detector initialized successfully--")
-            logger.debug("--dlib facial landmark detector initialized successfully--")
+            logger.debug("--- dlib facial landmark detector initialized successfully")
         except Exception as err:
             logger.error("--Error initializing dlib---> %s", err)
-            print(f"--ERROR: dlib initialization failed: {err}")
-            print("--Please install dlib: pip install dlib")
             raise
     
     @classmethod
@@ -622,8 +606,8 @@ class FacialLandmarksDetection:
             for face_idx, bbox in enumerate(face_bbox_list):
                 x1, y1, x2, y2 = map(int, bbox)
                 
-                print(f"--Processing face {face_idx} with bbox: [{x1}, {y1}, {x2}, {y2}]")
-                
+                logger.debug("--- Processing face %s bbox %s %s %s %s", face_idx, x1, y1, x2, y2)
+
                 # Create dlib rectangle from bbox
                 dlib_rect = dlib.rectangle(x1, y1, x2, y2)
                 
@@ -638,14 +622,12 @@ class FacialLandmarksDetection:
                     landmarks_coords.append([x, y, 0])  # z=0 for 2D landmarks
                 
                 all_face_landmarks[face_idx] = np.array(landmarks_coords)
-                print(f"--Detected {len(landmarks_coords)} landmarks for face {face_idx}")
-                logger.debug("--Detected %d landmarks for face %d-->", len(landmarks_coords), face_idx)
-            
-            print(f"--Total faces processed: {len(all_face_landmarks)}")
+                logger.debug("--- Detected %s landmarks for face %s", len(landmarks_coords), face_idx)
+
+            logger.debug("--- Total faces processed %s", len(all_face_landmarks))
             return all_face_landmarks
-            
+
         except Exception as err:
-            print(f"--ERROR in detect_landmarks_on_face: {err}")
             logger.error("--Error in detect_landmarks_on_face---> %s", err)
             return {}
     
@@ -672,15 +654,15 @@ class FacialLandmarksDetection:
             instance = cls()
             image = cv2.imread(image_frame_path)
             annotated_image = image.copy()
-            
-            print(f"--Starting annotation for {len(face_landmarks_dict)} faces")
-            
+
+            logger.debug("--- Starting annotation for %s faces", len(face_landmarks_dict))
+
             for face_idx, landmarks in face_landmarks_dict.items():
                 if landmarks is None:
-                    print(f"--Skipping face {face_idx} - no landmarks detected")
+                    logger.debug("--- Skipping face %s no landmarks detected", face_idx)
                     continue
-                
-                print(f"--Annotating face {face_idx} with {len(landmarks)} landmarks")
+
+                logger.debug("--- Annotating face %s with %s landmarks", face_idx, len(landmarks))
                 
                 # Draw landmark points
                 for landmark in landmarks:
@@ -691,23 +673,22 @@ class FacialLandmarksDetection:
             
             # Save if output path provided
             if output_path:
-                print(f"--Attempting to save to: {output_path}")
-                
+                logger.debug("--- Attempting to save to %s", output_path)
+
                 # Check if directory exists, create if not
                 output_dir = os.path.dirname(output_path)
                 if output_dir and not os.path.exists(output_dir):
                     os.makedirs(output_dir)
-                    print(f"--Created directory: {output_dir}")
-                
+                    logger.debug("--- Created directory %s", output_dir)
+
                 success = cv2.imwrite(output_path, annotated_image)
                 if success:
-                    print(f"--SUCCESS: Saved landmarks image to: {output_path}")
+                    logger.debug("--- SUCCESS Saved landmarks image to %s", output_path)
                     logger.debug("--Saved landmarks annotated image to---> %s", output_path)
                 else:
-                    print(f"--ERROR: Failed to save image to: {output_path}")
-                    logger.error("--Failed to save landmarks image to---> %s", output_path)
+                    logger.error("--- Failed to save landmarks image to %s", output_path)
             else:
-                print("--No output path provided, skipping save")
+                logger.debug("--- No output path provided skipping save")
             
             return annotated_image
             

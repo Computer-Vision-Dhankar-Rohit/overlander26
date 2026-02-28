@@ -40,6 +40,17 @@ import os
 import sys
 from typing import Annotated, Literal, TypedDict
 
+# ── Paths ─────────────────────────────────────────────────────────────────────
+_HERE        = os.path.dirname(os.path.abspath(__file__))   # .../src/claude_agents/
+_SRC_DIR     = os.path.dirname(_HERE)                        # .../src/
+_PROJECT_DIR = os.path.dirname(_SRC_DIR)                     # .../overlander26/
+_MCP_SERVER  = os.path.join(_HERE, "mcp_server_computer_vision.py")
+sys.path.insert(0, _SRC_DIR)
+
+from util_logger import setup_logger
+logger = setup_logger(module_name=str(__name__))
+
+from dotenv import load_dotenv
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, BaseMessage
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -47,11 +58,9 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
-_HERE        = os.path.dirname(os.path.abspath(__file__))   # .../src/claude_agents/
-_SRC_DIR     = os.path.dirname(_HERE)                        # .../src/
-_PROJECT_DIR = os.path.dirname(_SRC_DIR)                     # .../overlander26/
-_MCP_SERVER  = os.path.join(_HERE, "mcp_server_computer_vision.py")
+# ── Load secrets from DATA_DIR/secrets/.env ───────────────────────────────────
+_ENV_FILE = os.path.join(_PROJECT_DIR, "DATA_DIR", "secrets", ".env")
+load_dotenv(dotenv_path=_ENV_FILE, override=True)
 
 # ── LLM (Claude) ──────────────────────────────────────────────────────────────
 #   Uses ANTHROPIC_API_KEY from environment.
@@ -197,104 +206,164 @@ async def run_pipeline(initial_state: OverlanderState) -> OverlanderState:
         Final OverlanderState after all agents have completed.
     """
     # ── Connect to MCP server ─────────────────────────────────────────────────
-    # MultiServerMCPClient spawns the MCP server as a subprocess (stdio transport)
-    # and exposes its tools as standard LangChain BaseTool objects.
-    async with MultiServerMCPClient(
+    # langchain-mcp-adapters >= 0.1.0: no longer an async context manager.
+    mcp_client = MultiServerMCPClient(
         {
             "mcpComputerVision": {
-                "command":   sys.executable,            # same Python interpreter
+                "command":   sys.executable,
                 "args":      [_MCP_SERVER],
                 "transport": "stdio",
             }
         }
-    ) as mcp_client:
+    )
+    all_tools: list = await mcp_client.get_tools()
 
-        # Load all 4 tools from the MCP server
-        all_tools: list = mcp_client.get_tools()
+    # ── Filter tools per agent ────────────────────────────────────────────────
+    yt_dl_tools   = [t for t in all_tools if t.name == "get_youTubeVid_tool"]
+    yt_proc_tools = [t for t in all_tools if t.name == "procs_youTubeVid_tool"]
+    ipcam_tools   = [t for t in all_tools if t.name == "procs_IPCAM_Vid_tool"]
+    email_tools   = [t for t in all_tools if t.name == "send_email_tool"]
 
-        # ── Filter tools per agent ────────────────────────────────────────────
-        yt_dl_tools    = [t for t in all_tools if t.name == "get_youTubeVid_tool"]
-        yt_proc_tools  = [t for t in all_tools if t.name == "procs_youTubeVid_tool"]
-        ipcam_tools    = [t for t in all_tools if t.name == "procs_IPCAM_Vid_tool"]
-        email_tools    = [t for t in all_tools if t.name == "send_email_tool"]
+    # ── Build agent nodes ─────────────────────────────────────────────────────
+    yt_download_agent   = _make_agent_node(_YT_DOWNLOAD_PROMPT,   yt_dl_tools)
+    yt_process_agent    = _make_agent_node(_YT_PROCESS_PROMPT,    yt_proc_tools)
+    ipcam_process_agent = _make_agent_node(_IPCAM_PROCESS_PROMPT, ipcam_tools)
+    email_alert_agent   = _make_agent_node(_EMAIL_ALERT_PROMPT,   email_tools)
 
-        # ── Build agent nodes (LLM + bound tools) ────────────────────────────
-        yt_download_agent   = _make_agent_node(_YT_DOWNLOAD_PROMPT,   yt_dl_tools)
-        yt_process_agent    = _make_agent_node(_YT_PROCESS_PROMPT,    yt_proc_tools)
-        ipcam_process_agent = _make_agent_node(_IPCAM_PROCESS_PROMPT, ipcam_tools)
-        email_alert_agent   = _make_agent_node(_EMAIL_ALERT_PROMPT,   email_tools)
+    # ── Build ToolNodes ───────────────────────────────────────────────────────
+    yt_dl_tool_node   = ToolNode(yt_dl_tools)
+    yt_proc_tool_node = ToolNode(yt_proc_tools)
+    ipcam_tool_node   = ToolNode(ipcam_tools)
+    email_tool_node   = ToolNode(email_tools)
 
-        # ── Build ToolNodes (execute the actual MCP tool calls) ───────────────
-        yt_dl_tool_node    = ToolNode(yt_dl_tools)
-        yt_proc_tool_node  = ToolNode(yt_proc_tools)
-        ipcam_tool_node    = ToolNode(ipcam_tools)
-        email_tool_node    = ToolNode(email_tools)
+    # ── Assemble StateGraph ───────────────────────────────────────────────────
+    graph = StateGraph(OverlanderState)
 
-        # ── Assemble StateGraph ───────────────────────────────────────────────
-        graph = StateGraph(OverlanderState)
+    graph.add_node("yt_download_agent",   yt_download_agent)
+    graph.add_node("yt_download_tools",   yt_dl_tool_node)
+    graph.add_node("yt_process_agent",    yt_process_agent)
+    graph.add_node("yt_process_tools",    yt_proc_tool_node)
+    graph.add_node("ipcam_process_agent", ipcam_process_agent)
+    graph.add_node("ipcam_process_tools", ipcam_tool_node)
+    graph.add_node("email_alert_agent",   email_alert_agent)
+    graph.add_node("email_alert_tools",   email_tool_node)
 
-        # --- Agent 1: YouTube Download ---
-        graph.add_node("yt_download_agent",   yt_download_agent)
-        graph.add_node("yt_download_tools",   yt_dl_tool_node)
+    # START → route by task_type
+    graph.add_conditional_edges(START, _route_task)
 
-        # --- Agent 2: YouTube Process ---
-        graph.add_node("yt_process_agent",    yt_process_agent)
-        graph.add_node("yt_process_tools",    yt_proc_tool_node)
+    # YouTube path
+    graph.add_conditional_edges(
+        "yt_download_agent", tools_condition,
+        {"tools": "yt_download_tools", END: "yt_process_agent"},
+    )
+    graph.add_edge("yt_download_tools", "yt_download_agent")
 
-        # --- Agent 3: IP Camera Process ---
-        graph.add_node("ipcam_process_agent", ipcam_process_agent)
-        graph.add_node("ipcam_process_tools", ipcam_tool_node)
+    graph.add_conditional_edges(
+        "yt_process_agent", tools_condition,
+        {"tools": "yt_process_tools", END: "email_alert_agent"},
+    )
+    graph.add_edge("yt_process_tools", "yt_process_agent")
 
-        # --- Agent 4: Email Alert ---
-        graph.add_node("email_alert_agent",   email_alert_agent)
-        graph.add_node("email_alert_tools",   email_tool_node)
+    # IP Cam path
+    graph.add_conditional_edges(
+        "ipcam_process_agent", tools_condition,
+        {"tools": "ipcam_process_tools", END: "email_alert_agent"},
+    )
+    graph.add_edge("ipcam_process_tools", "ipcam_process_agent")
 
-        # ── Edges ─────────────────────────────────────────────────────────────
+    # Email agent (both paths converge here)
+    graph.add_conditional_edges(
+        "email_alert_agent", tools_condition,
+        {"tools": "email_alert_tools", END: END},
+    )
+    graph.add_edge("email_alert_tools", "email_alert_agent")
 
-        # START → route based on task_type
-        graph.add_conditional_edges(START, _route_task)
+    compiled_graph = graph.compile()
+    return await compiled_graph.ainvoke(initial_state)
 
-        # ── YouTube path ──────────────────────────────────────────────────────
-        # Agent 1: LLM decides to call tool → ToolNode executes → back to agent
-        # When the agent is satisfied (no more tool calls) → go to Agent 2
-        graph.add_conditional_edges(
-            "yt_download_agent",
-            tools_condition,
-            {"tools": "yt_download_tools", END: "yt_process_agent"},
-        )
-        # After tool executes, return to agent for follow-up reasoning
-        graph.add_edge("yt_download_tools", "yt_download_agent")
 
-        # Agent 2
-        graph.add_conditional_edges(
-            "yt_process_agent",
-            tools_condition,
-            {"tools": "yt_process_tools", END: "email_alert_agent"},
-        )
-        graph.add_edge("yt_process_tools", "yt_process_agent")
+# ============================================================
+# YOUTUBE-DOWNLOAD-ONLY PIPELINE  (used by Streamlit UI)
+# ============================================================
 
-        # ── IP Cam path ───────────────────────────────────────────────────────
-        # Agent 3
-        graph.add_conditional_edges(
-            "ipcam_process_agent",
-            tools_condition,
-            {"tools": "ipcam_process_tools", END: "email_alert_agent"},
-        )
-        graph.add_edge("ipcam_process_tools", "ipcam_process_agent")
+async def _run_yt_download_only(
+    youtube_url: str,
+    output_path: str,
+) -> OverlanderState:
+    """
+    Minimal LangGraph graph: just the YouTubeDownloadAgent.
 
-        # ── Both paths converge at email agent ────────────────────────────────
-        # Agent 4
-        graph.add_conditional_edges(
-            "email_alert_agent",
-            tools_condition,
-            {"tools": "email_alert_tools", END: END},
-        )
-        graph.add_edge("email_alert_tools", "email_alert_agent")
+    START → yt_download_agent ↔ yt_download_tools → END
 
-        # ── Compile and invoke ────────────────────────────────────────────────
-        compiled_graph = graph.compile()
-        final_state    = await compiled_graph.ainvoke(initial_state)
-        return final_state
+    Used by the Streamlit UI so it can invoke the agent without
+    running the full pose-detection + email pipeline.
+    """
+    mcp_client = MultiServerMCPClient(
+        {
+            "mcpComputerVision": {
+                "command":   sys.executable,
+                "args":      [_MCP_SERVER],
+                "transport": "stdio",
+            }
+        }
+    )
+    all_tools   = await mcp_client.get_tools()
+    yt_dl_tools = [t for t in all_tools if t.name == "get_youTubeVid_tool"]
+
+    yt_download_agent = _make_agent_node(_YT_DOWNLOAD_PROMPT, yt_dl_tools)
+    yt_dl_tool_node   = ToolNode(yt_dl_tools)
+
+    graph = StateGraph(OverlanderState)
+    graph.add_node("yt_download_agent", yt_download_agent)
+    graph.add_node("yt_download_tools", yt_dl_tool_node)
+
+    graph.add_edge(START, "yt_download_agent")
+    graph.add_conditional_edges(
+        "yt_download_agent",
+        tools_condition,
+        {"tools": "yt_download_tools", END: END},
+    )
+    graph.add_edge("yt_download_tools", "yt_download_agent")
+
+    compiled = graph.compile()
+
+    init_state: OverlanderState = {
+        "task_type":        "youtube",
+        "youtube_url":      youtube_url,
+        "ipcam_url":        "",
+        "max_frames":       0,
+        "video_file_path":  "",
+        "frames_sampled":   0,
+        "poses_detected":   0,
+        "detection_detail": "",
+        "email_to":         "",
+        "messages": [
+            HumanMessage(
+                content=(
+                    f"Download the YouTube video at: {youtube_url}\n"
+                    f"Save it to this directory: {output_path}\n"
+                    f"Call get_youTubeVid_tool with youtube_url={youtube_url!r} "
+                    f"and output_path={output_path!r}."
+                )
+            )
+        ],
+    }
+    return await compiled.ainvoke(init_state)
+
+
+def run_yt_download_only(youtube_url: str, output_path: str) -> OverlanderState:
+    """
+    Synchronous wrapper — safe to call from Streamlit.
+
+    Args:
+        youtube_url: Full YouTube URL.
+        output_path: Directory to save the downloaded MP4.
+
+    Returns:
+        Final OverlanderState. Check state["messages"][-1] for the
+        agent's summary, or parse tool message content for file_path.
+    """
+    return asyncio.run(_run_yt_download_only(youtube_url, output_path))
 
 
 # ============================================================
@@ -423,25 +492,17 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    print("=" * 60)
-    print("  Overlander LangGraph Agent Pipeline")
-    print("=" * 60)
-    print(f"  Mode     : {args.mode}")
-    print(f"  Email to : {args.email_to}")
-    print("=" * 60)
+    logger.debug("--- Overlander LangGraph Agent Pipeline mode %s email_to %s", args.mode, args.email_to)
 
     if args.mode == "youtube":
-        print(f"  YouTube  : {args.youtube_url}")
+        logger.debug("--- youtube_url %s", args.youtube_url)
         result = run_youtube_pipeline(args.youtube_url, args.email_to)
     else:
-        print(f"  IP Cam   : {args.ipcam_url}")
-        print(f"  Max frames: {args.max_frames}")
+        logger.debug("--- ipcam_url %s max_frames %s", args.ipcam_url, args.max_frames)
         result = run_ipcam_pipeline(args.ipcam_url, args.email_to, args.max_frames)
 
-    print("\n[Pipeline complete]")
-    # Print the last AI message as the final summary
+    logger.debug("--- Pipeline complete")
     for msg in reversed(result.get("messages", [])):
         if isinstance(msg, AIMessage) and not msg.tool_calls:
-            print("\nAgent summary:")
-            print(msg.content)
+            logger.debug("--- Agent summary %s", msg.content)
             break
