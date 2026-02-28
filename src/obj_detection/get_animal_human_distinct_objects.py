@@ -101,9 +101,8 @@ class CentralObjectClassifier:
 
         if not model_path.exists():
             logger.error(f"Model file not found: {model_path}")
-            print(f"❌ Model not found: {model_path}")
-            print(f"   Download with:")
-            print(f"   wget -O {model_path} {MODEL_DOWNLOAD_URL}")
+            logger.debug("--- Model not found %s", model_path)
+            logger.debug("--- Download with wget -O %s %s", model_path, MODEL_DOWNLOAD_URL)
             return False
 
         if cls.detector is None:
@@ -118,7 +117,7 @@ class CentralObjectClassifier:
             )
             cls.detector = mp_vision.ObjectDetector.create_from_options(options)
             logger.info("MediaPipe ObjectDetector initialized — EfficientDet-Lite0")
-            print("✅ MediaPipe ObjectDetector initialized (EfficientDet-Lite0)")
+            logger.debug("--- MediaPipe ObjectDetector initialized EfficientDet-Lite0")
         else:
             logger.debug("ObjectDetector already initialized — reusing singleton")
 
@@ -200,15 +199,15 @@ class CentralObjectClassifier:
         if video_path is None:
             mp4_files = sorted(VIDEOS_DIR.glob("*.mp4"))
             if not mp4_files:
-                print(f"❌ No MP4 files in {VIDEOS_DIR}")
-                print(f"   Run: YouTubeDownloader.download('<url>') first.")
+                logger.debug("--- No MP4 files in %s", VIDEOS_DIR)
+                logger.debug("--- Run YouTubeDownloader.download first")
                 return
             video_path = mp4_files[0]
-            print(f"📹 Auto-selected: {video_path.name}")
+            logger.debug("--- Auto-selected %s", video_path.name)
 
         video_path = Path(video_path)
         if not video_path.exists():
-            print(f"❌ Video not found: {video_path}")
+            logger.debug("--- Video not found %s", video_path)
             return
 
         # Init detector
@@ -217,7 +216,7 @@ class CentralObjectClassifier:
 
         cap = cv2.VideoCapture(str(video_path))
         if not cap.isOpened():
-            print(f"❌ Cannot open: {video_path}")
+            logger.debug("--- Cannot open %s", video_path)
             return
 
         fps          = cap.get(cv2.CAP_PROP_FPS) or 30.0
@@ -225,11 +224,8 @@ class CentralObjectClassifier:
         frame_step   = max(1, int(fps * frame_interval_sec))
         duration_s   = total_frames / fps if fps > 0 else 0
 
-        print(f"\n📁 Video     : {video_path.name}")
-        print(f"   FPS       : {fps:.1f}")
-        print(f"   Frames    : {total_frames}  ({duration_s:.1f}s)")
-        print(f"   Interval  : every {frame_interval_sec}s  (step={frame_step})")
-        print(f"   Output    : {OUTPUT_DIR}\n")
+        logger.debug("--- process_video video %s fps %s frames %s duration_s %s interval_sec %s step %s output %s",
+                     video_path.name, fps, total_frames, duration_s, frame_interval_sec, frame_step, OUTPUT_DIR)
         logger.info(f"process_video start — {video_path.name} fps={fps} frames={total_frames}")
 
         frame_idx   = 0
@@ -246,7 +242,7 @@ class CentralObjectClassifier:
                 label    = result["label"]
                 score    = result["score"]
 
-                print(f"  [{frame_idx:06d}] → {category:7s} | {label:<12s} score={score:.2f}")
+                logger.debug("--- frame %s category %s label %s score %s", frame_idx, category, label, score)
                 logger.info(
                     f"frame={frame_idx} category={category} label={label} score={score}"
                 )
@@ -263,7 +259,7 @@ class CentralObjectClassifier:
             frame_idx += 1
 
         cap.release()
-        print(f"\n✅ Done — {saved_count} frames saved to: {OUTPUT_DIR}")
+        logger.debug("--- Done saved_count %s output_dir %s", saved_count, OUTPUT_DIR)
         logger.info(f"process_video complete — saved={saved_count}")
 
     # ------------------------------------------------------------------

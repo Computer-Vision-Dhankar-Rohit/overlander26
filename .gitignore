@@ -37,3 +37,8 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Secrets — never commit credentials
+.env
+*.env
+DATA_DIR/secrets/

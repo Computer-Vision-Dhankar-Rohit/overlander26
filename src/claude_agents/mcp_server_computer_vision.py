@@ -22,10 +22,21 @@ from datetime import datetime
 
 import cv2
 import yt_dlp
+from dotenv import load_dotenv
 from fastmcp import FastMCP
+
+# ── Load secrets ──────────────────────────────────────────────────────────────
+_HERE_MCP    = os.path.dirname(os.path.abspath(__file__))
+_SRC_MCP     = os.path.dirname(_HERE_MCP)
+_PROJECT_MCP = os.path.dirname(_SRC_MCP)
+_ENV_FILE    = os.path.join(_PROJECT_MCP, "DATA_DIR", "secrets", ".env")
+load_dotenv(dotenv_path=_ENV_FILE, override=True)
 
 # ── path so we can import MediaPipeGoog from sibling analysis/ dir ────────────
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from util_logger import setup_logger
+logger = setup_logger(module_name=str(__name__))
 
 # ── Config from environment variables (never hard-code credentials) ───────────
 EMAIL_SENDER       = os.getenv("OVERLANDER_EMAIL_SENDER",   "")
@@ -355,7 +366,7 @@ def procs_IPCAM_Vid_tool(
 
 if __name__ == "__main__":
     # Runs the MCP server over stdio — LangChain agents connect via subprocess
-    print(f"[mcpComputerVision] Starting FastMCP server...")
-    print(f"[mcpComputerVision] YT download dir : {DEFAULT_YT_DOWNLOAD_PATH}")
-    print(f"[mcpComputerVision] Pose model      : {DEFAULT_POSE_MODEL_PATH}")
+    logger.debug("--- mcpComputerVision Starting FastMCP server")
+    logger.debug("--- mcpComputerVision YT download dir %s", DEFAULT_YT_DOWNLOAD_PATH)
+    logger.debug("--- mcpComputerVision Pose model %s", DEFAULT_POSE_MODEL_PATH)
     mcp.run()
