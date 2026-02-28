@@ -29,7 +29,7 @@ class MediaPipeGoog():
   detector = None
 
   @classmethod
-  def init_pose_detector(cls, model_path='../data_dir/pose_models/pose_landmarker.task'):
+  def init_pose_detector(cls, model_path=None):
     """
     Initialize MediaPipe Pose Detector ONCE at class level.
     CRITICAL: Call this before processing any frames to avoid memory leaks and performance issues.
@@ -45,6 +45,11 @@ class MediaPipeGoog():
     Output:
     - None (sets cls.detector)
     """
+    if model_path is None:
+        _here = os.path.dirname(os.path.abspath(__file__))   # .../src/analysis/
+        _git_root = os.path.dirname(os.path.dirname(_here))   # .../overlander26/
+        model_path = os.path.join(_git_root, "DATA_DIR", "pose_models", "pose_landmarker.task")
+
     logger.debug("--- init_pose_detector model_path type %s", type(model_path))
     logger.debug("--- init_pose_detector model_path %s", model_path)
 
@@ -158,7 +163,7 @@ class MediaPipeGoog():
 
     Args:
       video_source (str/int, optional):
-        - Local file: "../data_dir/pose_detected/init_video/gym_1.mp4"
+        - Local file: "../../DATA_DIR/pose_detected/init_video/gym_1.mp4"
         - RTSP stream: "rtsp://192.168.1.100:8080/video"
         - USB webcam: 0 (device index)
         - IP webcam: "http://192.168.1.100:8080/video"
@@ -181,9 +186,9 @@ class MediaPipeGoog():
     project_root = os.path.dirname(script_dir)
     git_up_root  = os.path.dirname(project_root)
 
-    dir_pose_init_video = os.path.join(git_up_root, "data_dir", "pose_detected", "init_video")
+    dir_pose_init_video = os.path.join(git_up_root, "DATA_DIR", "pose_detected", "init_video")
     os.makedirs(dir_pose_init_video, exist_ok=True)
-    dir_pose_detected_pose = os.path.join(git_up_root, "data_dir", "pose_detected", "detected_pose")
+    dir_pose_detected_pose = os.path.join(git_up_root, "DATA_DIR", "pose_detected", "detected_pose")
     os.makedirs(dir_pose_detected_pose, exist_ok=True)
 
     logger.debug("--- git_up_root %s", git_up_root)
@@ -219,8 +224,8 @@ class MediaPipeGoog():
             video_filename = os.path.basename(video_source)
             alt_locations = [
                 dir_pose_detected_pose,
-                os.path.join(git_up_root, "data_dir", "pose_detected"),
-                os.path.join(git_up_root, "data_dir"),
+                os.path.join(git_up_root, "DATA_DIR", "pose_detected"),
+                os.path.join(git_up_root, "DATA_DIR"),
             ]
 
             found_alternatives = []
@@ -231,7 +236,7 @@ class MediaPipeGoog():
 
             all_videos = []
             try:
-                for root, dirs, files in os.walk(os.path.join(git_up_root, "data_dir")):
+                for root, dirs, files in os.walk(os.path.join(git_up_root, "DATA_DIR")):
                     for file in files:
                         if file.endswith(('.mp4', '.avi', '.mov', '.mkv')):
                             all_videos.append(os.path.join(root, file))
@@ -246,7 +251,7 @@ class MediaPipeGoog():
                     logger.debug("--- available video %s", vid)
             else:
                 logger.debug("--- no video files found in data_dir %s",
-                             os.path.join(git_up_root, "data_dir"))
+                             os.path.join(git_up_root, "DATA_DIR"))
             return
     else:
         logger.error(f"❌ Invalid video source type: {type(video_source)}")
@@ -380,8 +385,12 @@ class MediaPipeGoog():
     logger.warning("-HIT-pose_media_pipe_google_0--->>")
     logger.debug("--- pose_media_pipe_google_0 hit")
 
-    dir_pose_not_ipcam        = "../data_dir/pose_detected/pose_not_ipcam/"
-    dir_got_pose_id_not_ipcam = "../data_dir/pose_detected/pose_id_not_ipcam/"
+    _here_0     = os.path.dirname(os.path.abspath(__file__))   # .../src/analysis/
+    _git_root_0 = os.path.dirname(os.path.dirname(_here_0))    # .../overlander26/
+    dir_pose_not_ipcam        = os.path.join(_git_root_0, "DATA_DIR", "pose_detected", "pose_not_ipcam") + "/"
+    dir_got_pose_id_not_ipcam = os.path.join(_git_root_0, "DATA_DIR", "pose_detected", "pose_id_not_ipcam") + "/"
+    os.makedirs(dir_pose_not_ipcam, exist_ok=True)
+    os.makedirs(dir_got_pose_id_not_ipcam, exist_ok=True)
 
     pose_write_path = "EMPTY_STR"
     frame_counter   = 0
@@ -437,7 +446,7 @@ class MediaPipeGoog():
     """
     This is INIT Frame -- frame_pose_save_path == image_saved_ipcam
     """
-    dir_pose_rect_only = "../data_dir/pose_detected/pose_rect_only/"
+    dir_pose_rect_only = "../../DATA_DIR/pose_detected/pose_rect_only/"
     pose_write_path = "EMPTY_STR"
     frame_counter   = 0
     dt_time_now     = datetime.now()

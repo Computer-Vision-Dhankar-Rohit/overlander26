@@ -225,31 +225,35 @@ class IPWebCam:
             logger.error("--main.py--object_detect_HFRtDetr_model-> %s" ,err)
 
     @classmethod
-    def pose_media_pipe_google(self):
-        """ 
+    def pose_media_pipe_google(self, video_source=None):
+        """
         Desc:
-            - Not IPWebCam -- Pose detection 
-            - Hit the recorded Videos and Static Frames 
+            - Not IPWebCam -- Pose detection
+            - Hit the recorded Videos and Static Frames
+        Args:
+            video_source: path to video file, RTSP URL, webcam index (int), or None for default
         """
         try:
-            logger.debug("--- pose_media_pipe_google hit")
-            MediaPipeGoog().pose_media_pipe_google_2()
+            logger.debug("--- pose_media_pipe_google hit video_source %s", video_source)
+            MediaPipeGoog().pose_media_pipe_google_2(video_source=video_source)
         except Exception as err:
             logger.error("--main.py--pose_media_pipe_google---> %s" ,err)
 
 
 if __name__ == "__main__":
-    #IPWebCam().invoke_scan() #TODO -ARGPARSE required for main method calls
-    #IPWebCam().analyse_scan()
+    import os as _os
+    _src_dir  = _os.path.dirname(_os.path.abspath(__file__))         # .../src/
+    _git_root = _os.path.dirname(_src_dir)                            # .../overlander26/
+    _gym2_path = _os.path.join(_git_root, "DATA_DIR", "pose_detected",
+                               "init_video", "gym_2.mp4")
 
-    # TODO - INVOKE End-to-end Face Detection - and Facial Landmarks 
-    # Combine the Output images - Creates side-by-side concatenated images
-    IPWebCam().face_detect_and_landmarks_combined()
-    
-    # Old separate methods (use only if you want individual outputs):
-    # IPWebCam().face_detect_yolo_hface()
-    # IPWebCam().face_detect_with_landmarks()
-    
+    # TODO-1: Pose detection end-to-end test with gym_2.mp4
+    IPWebCam().pose_media_pipe_google(video_source=_gym2_path)
+
+    # Other pipelines (commented out):
+    #IPWebCam().face_detect_and_landmarks_combined()
+    #IPWebCam().face_detect_yolo_hface()
+    #IPWebCam().face_detect_with_landmarks()
     #IPWebCam().object_detect_HFRtDetr_pipeline()
     #IPWebCam().object_detect_HFRtDetr_model()
     
