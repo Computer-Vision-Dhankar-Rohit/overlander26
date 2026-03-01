@@ -3,7 +3,7 @@
 #
 # RUN:
 #   cd /home/dhankar/temp/26_02/git_over/overlander26
-#   streamlit run ui_streamlit/app.py
+#   streamlit run ui_streamlit_codex/app.py
 # ============================================================
 
 import streamlit as st
@@ -19,12 +19,13 @@ st.markdown("---")
 
 st.markdown(
     """
-    Use the **sidebar** to navigate between tools.
+    Use the **sidebar** to trigger LangGraph runs (human-in-the-loop).
 
-    | Page | Agent | Tool |
+    | Page | Flow | Primary Tools |
     |---|---|---|
-    | Download Video | YouTubeDownloadAgent | `get_youTubeVid_tool` |
+    | Download Video | `get_youTubeVid_agent` | `get_youTubeVid_tool` |
+    | YouTube Pipeline | `Orchestrator_Agent -> get_youTubeVid_agent -> procs_youTubeVid_agent` | `get_youTubeVid_tool`, `procs_youTubeVid_tool` |
     """
 )
 
-st.info("Select **Download Video** from the sidebar to get started.")
+st.info("Select a page from the sidebar to start a run.")
