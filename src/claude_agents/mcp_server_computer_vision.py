@@ -33,7 +33,11 @@ _ENV_FILE    = os.path.join(_PROJECT_MCP, "DATA_DIR", "secrets", ".env")
 load_dotenv(dotenv_path=_ENV_FILE, override=True)
 
 # ── path so we can import MediaPipeGoog from sibling analysis/ dir ────────────
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# _SRC_MCP = src/  →  lets Python find analysis.media_pipe, util_logger, etc.
+sys.path.append(_SRC_MCP)
+# _SRC_MCP/analysis  →  lets media_pipe.py resolve its own sibling imports
+# (e.g. `from util_video_converter import ...` which lives in src/analysis/)
+sys.path.append(os.path.join(_SRC_MCP, "analysis"))
 
 from util_logger import setup_logger
 logger = setup_logger(module_name=str(__name__))
@@ -51,10 +55,10 @@ _PROJECT_DIR = os.path.dirname(_SRC_DIR)                     # .../overlander26/
 
 DEFAULT_YT_DOWNLOAD_PATH = os.getenv(
     "OVERLANDER_YT_DOWNLOAD_PATH",
-    os.path.join(_PROJECT_DIR, "data_dir", "youtube_downloads")
+    os.path.join(_PROJECT_DIR, "DATA_DIR", "youtube_downloads")
 )
 DEFAULT_POSE_MODEL_PATH = os.path.join(
-    _PROJECT_DIR, "data_dir", "pose_models", "pose_landmarker.task"
+    _PROJECT_DIR, "DATA_DIR", "pose_models", "pose_landmarker.task"
 )
 
 # ── Initialise FastMCP server ─────────────────────────────────────────────────
@@ -171,16 +175,43 @@ def get_youTubeVid_tool(
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([youtube_url])
+            # extract_info(download=True) downloads and returns the info dict.
+            # This resolves the actual output filename via prepare_filename()
+            # even when yt-dlp skips a file that already exists on disk
+            # (in that case _progress_hook never fires, so downloaded_files stays empty).
+            info = ydl.extract_info(youtube_url, download=True)
 
-        file_path = downloaded_files[0] if downloaded_files else output_path
+        # Resolve actual file path from the info dict
+        file_path = ""
+        if info:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl2:
+                expected = ydl2.prepare_filename(info)
+            base, _ = os.path.splitext(expected)
+            for ext in (".mp4", ".webm", ".mkv", ".avi", ".mov"):
+                candidate = base + ext
+                if os.path.isfile(candidate):
+                    file_path = candidate
+                    break
+            if not file_path and os.path.isfile(expected):
+                file_path = expected
+
+        # Fallback: use progress hook capture if prepare_filename didn't resolve
+        if not file_path and downloaded_files:
+            file_path = downloaded_files[0]
+
+        if not file_path:
+            return {"status": "error", "file_path": "", "detail": "Download completed but output file not found"}
+
+        abs_path = os.path.abspath(file_path)
+        logger.debug("--- get_youTubeVid_tool resolved file_path %s", abs_path)
         return {
             "status":    "downloaded",
-            "file_path": os.path.abspath(file_path),
-            "detail":    f"Saved to {file_path}",
+            "file_path": abs_path,
+            "detail":    f"Saved to {abs_path}",
         }
 
     except Exception as exc:
+        logger.debug("--- get_youTubeVid_tool error %s", exc)
         return {"status": "error", "file_path": "", "detail": str(exc)}
 
 
@@ -222,50 +253,99 @@ def procs_youTubeVid_tool(
     try:
         # Import here so the MCP server can start even if mediapipe is absent
         from analysis.media_pipe import MediaPipeGoog
+        from analysis.util_video_converter import util_convert_mp4
+
+        logger.debug("--- procs_youTubeVid_tool input video_path %s", video_path)
 
         # Ensure detector is loaded once
         MediaPipeGoog.init_pose_detector(DEFAULT_POSE_MODEL_PATH)
+        logger.debug("--- MediaPipeGoog detector initialized")
+
+        # CRITICAL: Convert video codec to H.264 if needed (YouTube MP4s often use AV1/VP9)
+        logger.info(f"🔍 Checking video codec compatibility for: {os.path.basename(video_path)}")
+        safe_video_path = util_convert_mp4(video_path)
+        if safe_video_path is None:
+            logger.error(f"❌ Failed to prepare video for playback: {video_path}")
+            return {
+                "status": "error",
+                "detail": f"Video codec conversion failed. Ensure ffmpeg is installed: sudo apt install ffmpeg"
+            }
+        if safe_video_path != video_path:
+            logger.info(f"📺 Using converted video: {safe_video_path}")
+            video_path = safe_video_path
+        else:
+            logger.debug("✅ Video codec is compatible, no conversion needed")
 
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
+            logger.error(f"❌ Cannot open video with cv2: {video_path}")
             return {"status": "error", "detail": f"Cannot open video: {video_path}"}
 
         fps         = cap.get(cv2.CAP_PROP_FPS) or 25.0
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         frame_interval = max(1, int(fps * sample_every_n_seconds))
 
+        logger.debug("--- Video opened successfully, FPS=%s, total_frames=%s, frame_interval=%s", fps, total_frames, frame_interval)
+
         # Output dir for raw sampled frames (same layout as the main pipeline)
         out_raw_dir = os.path.join(
-            _PROJECT_DIR, "data_dir", "pose_detected", "detected_pose"
+            _PROJECT_DIR, "DATA_DIR", "pose_detected", "detected_pose"
         )
         os.makedirs(out_raw_dir, exist_ok=True)
+        logger.debug("--- Output directory created: %s", out_raw_dir)
 
         sampled = 0
         poses_detected = 0
         current_frame = 0
+        read_errors = 0
+
+        logger.info(f"🎬 Starting frame sampling loop (frame_interval={frame_interval}, total_frames={total_frames})")
 
         while True:
             ret, frame = cap.read()
             if not ret:
+                if current_frame == 0:
+                    logger.error(f"❌ Cannot read first frame from video. File may be corrupted or incomplete: {video_path}")
+                    cap.release()
+                    return {
+                        "status": "error",
+                        "detail": f"Cannot read video frames. File may be corrupted. Try re-downloading the video or check if ffmpeg H.264 conversion succeeded."
+                    }
+                logger.debug("--- Video read loop complete at current_frame=%s", current_frame)
                 break
 
             if current_frame % frame_interval == 0:
+                logger.debug("--- Frame %s matches interval, sampling as frame_%04d", current_frame, sampled)
                 # Resize to match the main pipeline dimensions
                 resized = cv2.resize(frame, (500, 650))
                 frame_path = os.path.join(out_raw_dir, f"yt_frame_{sampled:04d}.jpg")
                 cv2.imwrite(frame_path, resized)
+                logger.debug("--- Frame saved to: %s", frame_path)
 
                 # Run pose detection (same function used by main pipeline)
-                result_path = MediaPipeGoog.pose_media_pipe_google_0(frame_path)
-                sampled += 1
-                if isinstance(result_path, str) and result_path != "EMPTY_STR":
-                    # _0() saves to pose_id_not_ipcam when landmarks found
-                    if "pose_id_not_ipcam" in result_path:
-                        poses_detected += 1
+                try:
+                    result_path = MediaPipeGoog.pose_media_pipe_google_0(frame_path)
+                    logger.debug("--- pose_media_pipe_google_0 returned: %s", result_path)
+                    
+                    sampled += 1
+                    if isinstance(result_path, str) and result_path != "EMPTY_STR":
+                        # _0() saves to pose_id_not_ipcam when landmarks found
+                        if "pose_id_not_ipcam" in result_path:
+                            logger.info(f"✅ Pose detected in frame_{sampled-1}: {os.path.basename(result_path)}")
+                            poses_detected += 1
+                        else:
+                            logger.debug("--- Frame %s processed but no landmarks found", sampled-1)
+                except Exception as e:
+                    logger.error(f"❌ Error in pose_media_pipe_google_0 for frame {sampled}: {e}", exc_info=True)
+                    sampled += 1
+            else:
+                if current_frame < 10:  # Only log first 10 frames to avoid spam
+                    logger.debug("--- Frame %s skipped (not matching interval %s)", current_frame, frame_interval)
 
             current_frame += 1
 
         cap.release()
+        logger.info(f"✅ Frame sampling complete. Sampled: {sampled}, Poses detected: {poses_detected}")
 
         return {
             "status":        "processed",
@@ -277,6 +357,7 @@ def procs_youTubeVid_tool(
         }
 
     except Exception as exc:
+        logger.error(f"❌ procs_youTubeVid_tool exception: {exc}", exc_info=True)
         return {"status": "error", "detail": str(exc)}
 
 
@@ -333,7 +414,7 @@ def procs_IPCAM_Vid_tool(
         frame_interval = max(1, int(fps * sample_every_n_seconds))
 
         out_raw_dir = os.path.join(
-            _PROJECT_DIR, "data_dir", "pose_detected", "detected_pose"
+            _PROJECT_DIR, "DATA_DIR", "pose_detected", "detected_pose"
         )
         os.makedirs(out_raw_dir, exist_ok=True)
 

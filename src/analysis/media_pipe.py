@@ -54,11 +54,19 @@ class MediaPipeGoog():
 
     logger.debug("--- init_pose_detector model_path type %s", type(model_path))
     logger.debug("--- init_pose_detector model_path %s", model_path)
+    
+    # CRITICAL: Check if model file exists
+    if not os.path.isfile(model_path):
+        logger.error(f"❌ Model file not found: {model_path}")
+        logger.info(f"💡 Download from: https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker/float16/1/pose_landmarker.task")
+        raise FileNotFoundError(f"Pose model not found at {model_path}")
 
     if cls.detector is None:
       from mediapipe.tasks import python
       from mediapipe.tasks.python import vision
 
+      logger.info(f"🔄 Loading pose_landmarker.task from: {model_path}")
+      
       base_options = python.BaseOptions(model_asset_path=model_path)
       options = vision.PoseLandmarkerOptions(
         base_options=base_options,
@@ -66,7 +74,7 @@ class MediaPipeGoog():
         output_segmentation_masks=False  # Disable for performance
       )
       cls.detector = vision.PoseLandmarker.create_from_options(options)
-      logger.info("--MediaPipe Pose Detector initialized successfully--")
+      logger.info(f"✅ MediaPipe Pose Detector initialized successfully from {os.path.basename(model_path)}")
       logger.debug("--- MediaPipe Pose Detector initialized Tasks API 0.10+")
     else:
       logger.debug("--Detector already initialized, reusing existing--")
@@ -323,7 +331,7 @@ class MediaPipeGoog():
 
     # Frame capture interval (every N seconds)
     capture_interval = 5  # in seconds
-    frame_interval   = int(fps * capture_interval)
+    frame_interval   = max(1, int(fps * capture_interval))  # Safety: ensure never 0
 
     # Initialize variables
     current_frame        = 0
@@ -445,7 +453,7 @@ class MediaPipeGoog():
         pose_write_path = dir_got_pose_id_not_ipcam + name_to_write
         cv2.imwrite(pose_write_path, annotated_image)
         frame_counter += 1
-        logger.warning("---YES_LANDMARKS-pose_write_path-POSE FRAMES WRITTEN--- %s", pose_write_path)
+        logger.debug("---YES_LANDMARKS-pose_write_path-POSE FRAMES WRITTEN--- %s", pose_write_path)
         logger.debug("--- YES_LANDMARKS pose_write_path %s", pose_write_path)
         return pose_write_path
     else:

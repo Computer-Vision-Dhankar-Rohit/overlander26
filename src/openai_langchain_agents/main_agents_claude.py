@@ -331,11 +331,7 @@ async def _run_youtube_pipeline_openai(
         "email_to":         email_to,
         "messages": [
             HumanMessage(
-                content=(
-                    f"Process the YouTube video at: {youtube_url}\n"
-                    f"Download it with get_youTubeVid_tool, then run pose "
-                    f"detection on the downloaded file with procs_youTubeVid_tool."
-                )
+                content=f"Download and process the YouTube video at: {youtube_url}"
             )
         ],
     }
@@ -399,12 +395,7 @@ async def _run_yt_download_only_openai(
         "email_to":         "",
         "messages": [
             HumanMessage(
-                content=(
-                    f"Download the YouTube video at: {youtube_url}\n"
-                    f"Save it to this directory: {output_path}\n"
-                    f"Call get_youTubeVid_tool with youtube_url={youtube_url!r} "
-                    f"and output_path={output_path!r}."
-                )
+                content=f"Download and process the YouTube video at: {youtube_url}"
             )
         ],
     }
