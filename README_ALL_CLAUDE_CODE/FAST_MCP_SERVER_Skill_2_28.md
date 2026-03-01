@@ -1,4 +1,8 @@
-Perfect ✅ — this fits **exactly** into the MCP Tool-Hosted Architecture pattern you’ve already been building for your **some_tool_sample Query MCP** and **LangGraph Tool Invocation** pipelines.
+
+
+### we prefer FAST MCP 
+- this is Suggested Content the Agent may follow other patterns to create a MCP Server and related tools 
+
 
 Now we will create an **END-to-END single-file Python MCP Server** using
 👉 `PrefectHQ / fastmcp`
@@ -34,9 +38,7 @@ LANGGRAPH AGENT
         └── procs_IPCAM_Vid_tool()
 ```
 
-Exactly the **same Tool Invocation model** you used earlier for:
 
-> AGENT → STATE → MCP TOOL → RETURN TO STATE
 
 ---
 
