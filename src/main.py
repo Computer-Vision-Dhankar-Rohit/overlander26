@@ -1,15 +1,16 @@
 import os
 from util_logger import setup_logger
 logger = setup_logger(module_name=str(__name__))
-# from read_cam.read_webcam import CV2VideoCapture
-from analysis.detr_hugging_face import (GetFramesFromVids , 
-                                        PlotBboxOnFrames,
-                                        FacialLandmarksDetection,
-                                        FaceDetection,
-                                        ObjDetHFRtDetr) #,PlotBboxOnFrames
 
-#from analysis.hugging_face_rtdetr_v2 import AutoModelRtDetrV2
+# MediaPipe: lightweight, always imported
 from analysis.media_pipe import MediaPipeGoog
+
+# DETR / YOLO models are heavy (load GB of weights at import time).
+# Import them lazily inside each method that needs them so that
+# running the pose pipeline doesn't trigger their initialization.
+# from analysis.detr_hugging_face import (GetFramesFromVids, PlotBboxOnFrames,
+#                                         FacialLandmarksDetection, FaceDetection,
+#                                         ObjDetHFRtDetr)
 
 
 class IPWebCam:
@@ -42,13 +43,15 @@ class IPWebCam:
     def analyse_scan(self):
         """`
         """
+        from analysis.detr_hugging_face import GetFramesFromVids, PlotBboxOnFrames
         GetFramesFromVids().get_frame_from_video()
         PlotBboxOnFrames().get_bbox_on_frames()
 
     @classmethod
     def face_detect_yolo_hface(self):
-        """ 
         """
+        """
+        from analysis.detr_hugging_face import FaceDetection
         image_rootDIR="/home/dhankar/temp/09_25/off_1/jungle_images/deepface_sample_images"
         ls_files_uploads = self.get_frames_local_list(image_rootDIR)
         for iter_k in range(len(ls_files_uploads)):
@@ -69,15 +72,16 @@ class IPWebCam:
         """
         try:
             logger.debug("--- face_detect_with_landmarks hit")
-            
+            from analysis.detr_hugging_face import FaceDetection, FacialLandmarksDetection
+
             # Set image directory
             image_rootDIR = "/home/dhankar/temp/09_25/off_1/jungle_images/deepface_sample_images"
             ls_files_uploads = self.get_frames_local_list(image_rootDIR)
-            
+
             for iter_k in range(len(ls_files_uploads)):
                 image_local_path = ls_files_uploads[iter_k]
                 logger.debug("--- Processing image for landmarks %s", image_local_path)
-                
+
                 # Step 1: Detect faces using YOLO
                 face_detection_instance = FaceDetection()
                 model_yolov8 = face_detection_instance.invoke_model_yolov8_face_detection()
@@ -197,6 +201,7 @@ class IPWebCam:
             - pipeline processed - Not direct Model 
         """
         try:
+            from analysis.detr_hugging_face import ObjDetHFRtDetr
             image_frame_path = "../data_dir/jungle_images/input_DIR/"
             ls_files_uploads = self.get_frames_local_list(image_frame_path)
             for iter_k in range(len(ls_files_uploads)):
@@ -225,31 +230,37 @@ class IPWebCam:
             logger.error("--main.py--object_detect_HFRtDetr_model-> %s" ,err)
 
     @classmethod
-    def pose_media_pipe_google(self):
-        """ 
+    def pose_media_pipe_google(self, video_source=None):
+        """
         Desc:
-            - Not IPWebCam -- Pose detection 
-            - Hit the recorded Videos and Static Frames 
+            - Not IPWebCam -- Pose detection
+            - Hit the recorded Videos and Static Frames
+        Args:
+            video_source: path to video file, RTSP URL, webcam index (int), or None for default
         """
         try:
-            logger.debug("--- pose_media_pipe_google hit")
-            MediaPipeGoog().pose_media_pipe_google_2()
+            logger.debug("--- pose_media_pipe_google hit video_source %s", video_source)
+            MediaPipeGoog().pose_media_pipe_google_2(video_source=video_source)
         except Exception as err:
             logger.error("--main.py--pose_media_pipe_google---> %s" ,err)
 
 
 if __name__ == "__main__":
-    #IPWebCam().invoke_scan() #TODO -ARGPARSE required for main method calls
-    #IPWebCam().analyse_scan()
+    import os as _os
+    _src_dir  = _os.path.dirname(_os.path.abspath(__file__))         # .../src/
+    _git_root = _os.path.dirname(_src_dir)                            # .../overlander26/
+    # gym_2.mp4 is AV1-encoded (not supported by OpenCV without GPU).
+    # gym_2_h264.mp4 is the H.264 re-encode — compatible with cv2.VideoCapture.
+    _gym2_path = _os.path.join(_git_root, "DATA_DIR", "pose_detected",
+                               "init_video", "gym_2_h264.mp4")
 
-    # TODO - INVOKE End-to-end Face Detection - and Facial Landmarks 
-    # Combine the Output images - Creates side-by-side concatenated images
-    IPWebCam().face_detect_and_landmarks_combined()
-    
-    # Old separate methods (use only if you want individual outputs):
-    # IPWebCam().face_detect_yolo_hface()
-    # IPWebCam().face_detect_with_landmarks()
-    
+    # TODO-1: Pose detection end-to-end test with gym_2.mp4
+    IPWebCam().pose_media_pipe_google(video_source=_gym2_path)
+
+    # Other pipelines (commented out):
+    #IPWebCam().face_detect_and_landmarks_combined()
+    #IPWebCam().face_detect_yolo_hface()
+    #IPWebCam().face_detect_with_landmarks()
     #IPWebCam().object_detect_HFRtDetr_pipeline()
     #IPWebCam().object_detect_HFRtDetr_model()
     
