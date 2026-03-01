@@ -12,6 +12,28 @@ Timestamp format: `min_now = dt_time_now.strftime("_%m_%d_%Y_%H_%M_%S")`
 
 ---
 
+## _03_01_2026_22_40_37
+
+**Commit**: `3e4a9b6`
+**Branch**: `feature/dev_claude_1` → `main`
+**PR**: [#10](https://github.com/Computer-Vision-Dhankar-Rohit/overlander26/pull/10) (updated)
+**TODO**: TODO-3
+
+### Changes
+
+| File | Action | Description |
+|------|--------|-------------|
+| `ui_streamlit_claude/pages/trigger_agents_OpenAI.py` | CREATED | Minimal Streamlit page to trigger OpenAI agents |
+
+### Details
+- Radio selector: **Full Pipeline** (Orchestrator → Download → PoseDetect) or **Download Only** (Orchestrator → Download)
+- Calls `run_youtube_pipeline_openai` or `run_yt_download_only_openai` from `main_agents_claude.py`
+- `st.status()` shows per-agent progress live
+- Tool results shown as `st.json()` expanders; final AI summary below
+- `setup_logger` wired per mandatory rules
+
+---
+
 ## _03_01_2026_22_12_24
 
 **Commit**: `c673c77`
