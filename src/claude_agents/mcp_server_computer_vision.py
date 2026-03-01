@@ -145,12 +145,28 @@ def get_youTubeVid_tool(
         if d["status"] == "finished":
             downloaded_files.append(d["filename"])
 
+    # Redirect ALL yt-dlp output to stderr so stdout stays clean for
+    # MCP stdio JSON-RPC messages (yt-dlp \r progress lines corrupt the stream).
+    class _StderrLogger:
+        def debug(self, msg: str) -> None:
+            pass   # suppress debug/progress lines entirely
+        def info(self, msg: str) -> None:
+            pass
+        def warning(self, msg: str) -> None:
+            import sys
+            sys.stderr.write(f"yt-dlp WARNING: {msg}\n")
+        def error(self, msg: str) -> None:
+            import sys
+            sys.stderr.write(f"yt-dlp ERROR: {msg}\n")
+
     ydl_opts = {
         "format":   "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
         "outtmpl":  os.path.join(output_path, "%(title)s.%(ext)s"),
         "progress_hooks": [_progress_hook],
         "quiet":    True,
         "no_warnings": True,
+        "noprogress": True,
+        "logger":   _StderrLogger(),
     }
 
     try:
