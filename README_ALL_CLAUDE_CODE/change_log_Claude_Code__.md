@@ -12,6 +12,40 @@ Timestamp format: `min_now = dt_time_now.strftime("_%m_%d_%Y_%H_%M_%S")`
 
 ---
 
+## _03_02_2026_01_22_48 — PR #14 raised
+
+**Commit**: `84b966d`
+**Branch**: `feature/dev_claude_1` → `main`
+**NEW PR**: [#14](https://github.com/Computer-Vision-Dhankar-Rohit/overlander26/pull/14) — open
+**PR Creator**: `CLAUDE_CODE_AGENT_OVERLANDER26`
+
+### Files Changed (5)
+
+**`src/analysis/media_pipe.py`**
+- `init_pose_detector()`: added model file existence check (`os.path.isfile`) — raises `FileNotFoundError` if `.task` missing
+- `pose_media_pipe_google_2()`: `frame_interval = max(1, int(fps * capture_interval))` — prevents division-by-zero on 0-fps sources
+- `pose_media_pipe_google_0()`: `YES_LANDMARKS` log demoted from `WARNING` → `DEBUG` (was polluting warning-level logs)
+
+**`src/analysis/util_video_converter.py`**
+- `needs_conversion()`: unknown/empty codec now returns `True` (force H.264 conversion) instead of falling through
+- `util_convert_mp4()`: added file-size guard — files <1 MB rejected as incomplete downloads; log messages clarified
+
+**`src/claude_agents/mcp_server_computer_vision.py`**
+- Fixed `DATA_DIR` casing (was `data_dir`) in `DEFAULT_YT_DOWNLOAD_PATH`, `DEFAULT_POSE_MODEL_PATH`, `procs_youTubeVid_tool`, `procs_IPCAM_Vid_tool`
+- Fixed `sys.path` — now appends both `_SRC_MCP` (src/) and `_SRC_MCP/analysis` so sibling imports resolve
+- `get_youTubeVid_tool`: replaced `ydl.download()` with `extract_info(download=True)` + `prepare_filename()` for reliable output-path resolution
+- `procs_youTubeVid_tool`: added H.264 codec conversion step before `cv2.VideoCapture`; added per-frame debug logging; added first-frame read-error detection with descriptive error return
+- Error handling: `exc_info=True` on exception logs
+
+**`src/openai_langchain_agents/main_agents_claude.py`**
+- Simplified `HumanMessage` content in both `_run_youtube_pipeline_openai` and `_run_yt_download_only_openai`
+
+**`ui_streamlit_claude/pages/trigger_agents_OpenAI.py`**
+- Added framework icon header (OpenAI / LangGraph / LangChain icons in top-right)
+- Added pose-detected image gallery panel — reads `DATA_DIR/pose_detected/pose_id_not_ipcam/*.png` and renders in 3-column grid after agent run
+
+---
+
 ## _03_01_2026_23_01_40 — PR raised
 
 **Commit**: `26d721e`

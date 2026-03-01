@@ -37,9 +37,26 @@ from openai_langchain_agents.main_agents_claude import (
 )
 
 # ── Page ──────────────────────────────────────────────────────────────────────
-st.set_page_config(page_title="Trigger OpenAI Agents", page_icon="⚡", layout="centered")
+st.set_page_config(page_title="Computer Vision - LangChain OpenAI Agents", page_icon="🤖", layout="centered")
 
-st.title("Trigger OpenAI Agents")
+# ── Header with Framework Icons ───────────────────────────────────────────────
+col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1])
+
+with col1:
+    st.title("🤖 Trigger OpenAI Agents")
+
+with col5:
+    st.markdown(
+        """
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px;">
+            <span title="OpenAI GPT" style="font-size: 24px; cursor: help;">🔮</span>
+            <span title="LangGraph" style="font-size: 24px; cursor: help;">🕸️</span>
+            <span title="LangChain" style="font-size: 24px; cursor: help;">⛓️</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 st.caption(f"Model: `{OPENAI_MODEL}`  |  MCP Server: `mcpComputerVision`  |  Transport: `stdio`")
 st.markdown("---")
 
@@ -181,6 +198,35 @@ if run_btn:
     if final_ai:
         st.markdown("### Agent Summary")
         st.write(final_ai)
+
+    # ── Pose-Detected Images ──────────────────────────────────────────────────
+    # Images written by media_pipe.py → pose_media_pipe_google_0() line 446:
+    #   cv2.imwrite(pose_write_path, annotated_image)
+    # Saved to: DATA_DIR/pose_detected/pose_id_not_ipcam/
+    # Only images where flag_pose_landmarks_detected == "YES_LANDMARKS" are here.
+
+    st.markdown("---")
+    st.markdown("### Pose-Detected Frames — Faces Identified by MediaPipe")
+
+    _pose_img_dir = os.path.join(_PROJECT_DIR, "DATA_DIR", "pose_detected", "pose_id_not_ipcam")
+    logger.debug("--- trigger_agents_OpenAI pose_img_dir %s", _pose_img_dir)
+
+    if os.path.isdir(_pose_img_dir):
+        _pose_imgs = sorted(
+            [f for f in os.listdir(_pose_img_dir) if f.lower().endswith(".png")],
+        )
+        if _pose_imgs:
+            st.caption(f"{len(_pose_imgs)} pose-annotated frame(s) found in `pose_id_not_ipcam/`")
+            cols = st.columns(3)
+            for idx, fname in enumerate(_pose_imgs):
+                fpath = os.path.join(_pose_img_dir, fname)
+                with cols[idx % 3]:
+                    st.image(fpath, caption=fname, use_container_width=True)
+                logger.debug("--- trigger_agents_OpenAI displaying pose img %s", fname)
+        else:
+            st.info("No pose-annotated frames found yet. Run the Full Pipeline to generate them.")
+    else:
+        st.warning(f"Output directory not found: `{_pose_img_dir}`")
 
 st.markdown("---")
 st.caption("Agent flow: Orchestrator → get_youTubeVid_agent → procs_youTubeVid_agent → END")

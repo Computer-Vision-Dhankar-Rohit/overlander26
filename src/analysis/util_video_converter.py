@@ -97,6 +97,12 @@ class VideoCodecConverter:
         """
         codec = VideoCodecConverter.get_video_codec(video_path)
         
+        # If ffprobe returned empty codec, the file is likely corrupted/incomplete
+        if not codec or codec == 'unknown':
+            logger.warning(f"⚠️ Cannot detect video codec (file may be corrupted/incomplete): {video_path}")
+            logger.info(f"Attempting H.264 conversion to recover file integrity...")
+            return True
+        
         # If codec is already H.264 and file has h264 in name, no conversion needed
         if codec == 'h264' and '_h264' in video_path.lower():
             return False
@@ -193,17 +199,23 @@ class VideoCodecConverter:
                  H.264, or converted file)
         """
         if not os.path.exists(video_path):
-            logger.error(f"Video file not found: {video_path}")
+            logger.error(f"❌ Video file not found: {video_path}")
             return None
         
-        logger.debug(f"Checking video compatibility: {video_path}")
+        # Check file size - should be at least 1MB for a valid video
+        file_size = os.path.getsize(video_path)
+        if file_size < 1024 * 1024:  # Less than 1MB
+            logger.error(f"❌ Video file too small ({file_size} bytes), likely incomplete download: {video_path}")
+            return None
+        
+        logger.debug(f"Checking video compatibility: {video_path} ({file_size / (1024*1024):.1f} MB)")
         
         if VideoCodecConverter.needs_conversion(video_path):
-            logger.warning(f"Video needs H.264 conversion: {video_path}")
+            logger.warning(f"📺 Video needs H.264 conversion: {video_path}")
             converted_path = VideoCodecConverter.convert_to_h264(video_path)
             return converted_path
         
-        logger.debug(f"Video is compatible: {video_path}")
+        logger.debug(f"✅ Video is compatible: {video_path}")
         return video_path
 
 
