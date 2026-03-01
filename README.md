@@ -6,6 +6,7 @@
 
 ## 📸 Screenshots & Demo Videos
 
+- Original Video - https://www.youtube.com/shorts/TWNxXXeLmM0
 
 | Type | Filename | Preview | Description |
 |------|----------|---------|-------------|
