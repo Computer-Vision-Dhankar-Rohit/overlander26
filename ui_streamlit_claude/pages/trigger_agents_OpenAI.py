@@ -83,17 +83,20 @@ if run_btn:
         try:
             if full_pipeline:
                 state = run_youtube_pipeline_openai(youtube_url=url)
+                logger.debug("--AAA-full_pipeline-STATE--=%s",state)
+
             else:
                 out_dir = os.path.join(_PROJECT_DIR, "DATA_DIR", "youTubeVids")
                 os.makedirs(out_dir, exist_ok=True)
                 state = run_yt_download_only_openai(youtube_url=url, output_path=out_dir)
+                logger.debug("-bbb--STATE-run_yt_download_only_openai-=%s",state)
 
             status.update(label="Agents completed", state="complete")
             logger.debug("--- trigger_agents_OpenAI completed ok")
 
         except Exception as exc:
             status.update(label="Agent error", state="error")
-            logger.debug("--- trigger_agents_OpenAI error %s", exc)
+            logger.error("--- trigger_agents_OpenAI error %s", exc)
             st.error(f"Error: {exc}")
             st.stop()
 
@@ -122,8 +125,52 @@ if run_btn:
         None,
     )
 
+    # ── AI MESSAGES ───────────────────────────────────────────────────────────────
+    st.markdown("### Messages in STATE of the - Tool Calling OpenAI-AGENTS...")
+    
+    if messages:
+        with st.expander("📋 View All AI Messages (JSON Format)", expanded=False):
+            # Format all messages as a list of dictionaries for JSON display
+            messages_json = []
+            for i, m in enumerate(messages):
+                # Extract tool_calls (handle both dict and object formats)
+                tool_calls_list = []
+                if hasattr(m, "tool_calls") and m.tool_calls:
+                    for tc in m.tool_calls:
+                        if isinstance(tc, dict):
+                            # If it's a dict, extract fields safely
+                            tool_calls_list.append({
+                                "id": tc.get("id", "unknown"),
+                                "name": tc.get("function", {}).get("name", "unknown") if isinstance(tc.get("function"), dict) else "unknown",
+                                "arguments": tc.get("function", {}).get("arguments", "") if isinstance(tc.get("function"), dict) else ""
+                            })
+                        else:
+                            # If it's an object, access attributes
+                            try:
+                                tool_calls_list.append({
+                                    "id": tc.id,
+                                    "name": tc.function.name,
+                                    "arguments": tc.function.arguments
+                                })
+                            except AttributeError:
+                                tool_calls_list.append({"raw": str(tc)})
+                
+                msg_dict = {
+                    "index": i,
+                    "type": getattr(m, "type", "unknown"),
+                    "content": getattr(m, "content", ""),
+                    "tool_calls": tool_calls_list,
+                    "raw": str(m)
+                }
+                messages_json.append(msg_dict)
+            
+            # Display as JSON
+            st.json(messages_json)
+    else:
+        st.info("ℹ️ No messages available yet. Run the agent to generate messages.")
+
     # ── Results ───────────────────────────────────────────────────────────────
-    st.markdown("### Results")
+    st.markdown("### Results from Tool Calling OpenAI-AGENTS...")
 
     for i, result in enumerate(tool_results, 1):
         tool_status = result.get("status", "unknown")
