@@ -12,6 +12,32 @@ Timestamp format: `min_now = dt_time_now.strftime("_%m_%d_%Y_%H_%M_%S")`
 
 ---
 
+## _03_01_2026_23_01_40
+
+**Commit**: `d8c4f50`
+**Branch**: `feature/dev_claude_1` → `main`
+**PR**: [#10](https://github.com/Computer-Vision-Dhankar-Rohit/overlander26/pull/10) (updated)
+
+### Changes
+
+| File | Action | Description |
+|------|--------|-------------|
+| `ui_streamlit_claude/pages/trigger_agents_OpenAI.py` | UPDATED | State debug logging + full message inspector section |
+| `README.md` | UPDATED | Added original demo video YouTube link |
+
+### trigger_agents_OpenAI.py — What Changed
+- `logger.debug("--AAA-full_pipeline-STATE--=%s", state)` — logs full state after pipeline run
+- `logger.debug("-bbb--STATE-run_yt_download_only_openai-=%s", state)` — logs state after download-only run
+- Exception path upgraded: `logger.debug` → `logger.error`
+- New UI section **"Messages in STATE of the - Tool Calling OpenAI-AGENTS..."**
+  — expander renders all agent messages as structured JSON: `index`, `type`, `content`, `tool_calls`, `raw`
+- Results section renamed: **"Results from Tool Calling OpenAI-AGENTS..."**
+
+### README.md — What Changed
+- Added demo video link: `https://www.youtube.com/shorts/TWNxXXeLmM0`
+
+---
+
 ## _03_01_2026_22_40_37
 
 **Commit**: `3e4a9b6`
