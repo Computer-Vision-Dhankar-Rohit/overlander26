@@ -21,10 +21,11 @@ st.markdown(
     """
     Use the **sidebar** to navigate between tools.
 
-    | Page | Agent | Tool |
+    | Page | Agents | Tools |
     |---|---|---|
-    | Download Video | YouTubeDownloadAgent | `get_youTubeVid_tool` |
+    | Download Video | YouTubeDownloadAgent (Claude) | `get_youTubeVid_tool` |
+    | Full Pipeline (OpenAI) | Orchestrator → YouTubeDownload → PoseDetection | `get_youTubeVid_tool`, `procs_youTubeVid_tool` |
     """
 )
 
-st.info("Select **Download Video** from the sidebar to get started.")
+st.info("Select a page from the **sidebar** to get started.")
