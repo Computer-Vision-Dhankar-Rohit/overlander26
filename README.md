@@ -1,8 +1,22 @@
-# Overlander26 -- permitted Claude 
+# Overlander26 -Human Pose Detection
 
-Human Pose Detection and Analysis using MediaPipe Tasks API
+## Demo - "Hello World"
+- Choose YouTube video , view and download (Streamlit UI)
+- Get vid with Human movement (face not always visible - above the virtual fence line). As and when face visible (Left-EYE Visible) , grab that Image Frame for further processing.
 
 ## 📸 Screenshots & Demo Videos
+
+
+| Type | Filename | Preview | Description |
+|------|----------|---------|-------------|
+| 🖼️ Image | `Face-Image-1` | ![Screenshot](./screen_shots/frame_0002.jpg_frame_pose_12__0__.png) | (Left-EYE)|
+| 🖼️ Image | `Face-Image-2` | ![Screenshot](./screen_shots/frame_0001.jpg_frame_pose_11__0__.png) | (Left-EYE Occluded)|
+| 🖼️ Image | `Face-Image-3` | ![Screenshot](./screen_shots/frame_0000.jpg_frame_pose_39__0__.png) | (Left-EYE Occluded)|
+
+
+---
+
+
 
 | Type | Filename | Preview | Description |
 |------|----------|---------|-------------|
