@@ -1,14 +1,18 @@
 """
 discord_bot.py
-discord.py Bot subclass — listens for "ping" in channels and replies with JSON.
+discord.py Bot subclass — passes all messages to the LangChain agent.
 """
 
 import os
+import sys
 import logging
 
 import discord
 
-from discord_client import build_pong_response
+# Allow import of langchain_agents_discord from the fast_api sibling directory
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "fast_api"))
+
+from langchain_agents_discord import agent  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +23,8 @@ intents.message_content = True
 
 class PingBot(discord.Client):
     """
-    Discord bot that responds to 'ping' messages with a JSON pong.
+    Discord bot powered by a LangChain OpenAI agent.
+    Responds to all messages in watched channels — including "ping".
 
     Optional env var DISCORD_CHANNEL_ID restricts listening to one channel.
     If not set, bot responds in any channel it can see.
@@ -27,7 +32,6 @@ class PingBot(discord.Client):
 
     def __init__(self):
         super().__init__(intents=intents)
-        # Optional: restrict to a specific channel ID
         raw = os.environ.get("DISCORD_CHANNEL_ID", "").strip()
         self.watch_channel_id: int | None = int(raw) if raw else None
 
@@ -39,7 +43,7 @@ class PingBot(discord.Client):
             logger.info("Watching ALL channels (no DISCORD_CHANNEL_ID set)")
 
     async def on_message(self, message: discord.Message):
-        # Ignore messages sent by this bot itself (prevents echo loop)
+        # Ignore messages from this bot (prevents echo loop)
         if message.author == self.user:
             return
 
@@ -51,16 +55,24 @@ class PingBot(discord.Client):
         if self.watch_channel_id and message.channel.id != self.watch_channel_id:
             return
 
-        text = message.content.strip().lower()
+        text = message.content.strip()
+        if not text:
+            return
 
-        if text == "ping":
-            channel_name = getattr(message.channel, "name", str(message.channel.id))
-            logger.info(
-                "Received ping from %s in #%s", message.author, channel_name
+        channel_name = getattr(message.channel, "name", str(message.channel.id))
+        author = str(message.author)
+
+        logger.info("Message from %s in #%s: %s", author, channel_name, text[:80])
+
+        # Show typing indicator while agent processes
+        async with message.channel.typing():
+            reply = await agent.respond(
+                message=text,
+                channel=channel_name,
+                author=author,
             )
-            reply = build_pong_response(channel_name)
-            await message.channel.send(reply)
-            logger.info("Pong sent to #%s", channel_name)
+
+        await message.channel.send(reply)
 
 
 # Singleton bot instance — imported by app_discord.py
